@@ -188,7 +188,9 @@ enum CategoryColor {
   red(Color(0xFFB8413A), Color(0xFFF0918A)),
   gray(Color(0xFF66655F), Color(0xFFB5B3AC)),
   amber(Color(0xFF9C6512), Color(0xFFE9B45E)),
-  indigo(Color(0xFF4655B8), Color(0xFF9AA5F0));
+  indigo(Color(0xFF4655B8), Color(0xFF9AA5F0)),
+  // Same green as the income color. Used by "Salary".
+  emerald(Color(0xFF17784F), Color(0xFF4FC28B));
 
   const CategoryColor(this.light, this.dark);
 
@@ -199,6 +201,10 @@ enum CategoryColor {
   static const pickable = [
     blue, green, orange, purple, teal, brown, pink, red, gray, //
   ];
+
+  /// Finds a color by its stored name. Unknown names give [gray].
+  static CategoryColor fromKey(String key) =>
+      values.firstWhere((c) => c.name == key, orElse: () => gray);
 
   Color resolve(Brightness brightness) =>
       brightness == Brightness.dark ? dark : light;

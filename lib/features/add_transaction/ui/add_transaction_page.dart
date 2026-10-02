@@ -5,9 +5,8 @@ import '../../../core/icons/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/segmented_tabs.dart';
+import '../../../data/models/transaction_kind.dart';
 import '../../../shell/placeholder_body.dart';
-
-enum TransactionKind { expense, income }
 
 /// Full-screen "Add expense" / "Add income" page.
 /// Placeholder until Task 6; only the header works.

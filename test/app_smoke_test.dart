@@ -1,27 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personal_finance/app.dart';
 import 'package:personal_finance/features/add_transaction/ui/add_transaction_page.dart';
 import 'package:personal_finance/features/dashboard/ui/dashboard_page.dart';
 import 'package:personal_finance/features/settings/ui/settings_page.dart';
 import 'package:personal_finance/features/statistics/ui/statistics_page.dart';
 import 'package:personal_finance/features/transactions/ui/transactions_page.dart';
 
-Future<void> _pumpApp(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(390, 844);
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
-  await tester.pumpWidget(const ProviderScope(child: PersonalFinanceApp()));
-  await tester.pumpAndSettle();
-}
+import 'package:personal_finance/data/repositories/settings_repository.dart';
+
+import 'helpers/test_db.dart';
 
 /// Finds a bottom nav tab by its label.
 Finder _tab(String label) => find.bySemanticsLabel(label);
 
 void main() {
-  testWidgets('opens on Home and switches tabs', (tester) async {
-    await _pumpApp(tester);
+  testApp('opens on Home and switches tabs', (tester, db) async {
     expect(find.byType(DashboardPage), findsOneWidget);
 
     await tester.tap(_tab('Transactions'));
@@ -41,11 +34,10 @@ void main() {
     expect(find.byType(DashboardPage), findsOneWidget);
   });
 
-  testWidgets('+ opens Add expense over the nav and closes again', (
+  testApp('+ opens Add expense over the nav and closes again', (
     tester,
+    db,
   ) async {
-    await _pumpApp(tester);
-
     // Tap the top half of the button, the part above the bar.
     final button = find.bySemanticsLabel('Add transaction');
     await tester.tapAt(tester.getCenter(button) - const Offset(0, 20));
@@ -60,8 +52,7 @@ void main() {
     expect(find.byType(DashboardPage), findsOneWidget);
   });
 
-  testWidgets('Settings > Appearance switches the theme', (tester) async {
-    await _pumpApp(tester);
+  testApp('Settings > Appearance switches the theme', (tester, db) async {
     await tester.tap(_tab('Settings'));
     await tester.pumpAndSettle();
 
@@ -69,16 +60,18 @@ void main() {
     await tester.pumpAndSettle();
     final context = tester.element(find.byType(SettingsPage));
     expect(Theme.of(context).brightness, Brightness.dark);
+    final saved = await tester.runAsync(() => SettingsRepository(db).load());
+    expect(saved!.themeMode, ThemeMode.dark, reason: 'choice is saved');
 
     await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();
     expect(Theme.of(context).brightness, Brightness.light);
   });
 
-  testWidgets('Settings opens the design preview and goes back', (
+  testApp('Settings opens the design preview and goes back', (
     tester,
+    db,
   ) async {
-    await _pumpApp(tester);
     await tester.tap(_tab('Settings'));
     await tester.pumpAndSettle();
 
