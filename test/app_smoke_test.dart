@@ -7,12 +7,12 @@ void main() {
   testWidgets('app starts and switches to dark theme', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: PersonalFinanceApp()));
 
-    expect(find.text('Design tokens'), findsOneWidget);
+    expect(find.text('Design preview'), findsOneWidget);
 
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
 
-    final context = tester.element(find.text('Design tokens'));
+    final context = tester.element(find.text('Design preview'));
     expect(Theme.of(context).brightness, Brightness.dark);
   });
 }
