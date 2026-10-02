@@ -56,6 +56,7 @@ class CircleIconButton extends StatelessWidget {
     );
 
     return Semantics(
+      container: true,
       button: true,
       label: semanticLabel,
       child: _raised
@@ -191,6 +192,7 @@ class _BaseButton extends StatelessWidget {
       side: border,
     );
     return Semantics(
+      container: true,
       button: true,
       enabled: onPressed != null,
       child: Material(

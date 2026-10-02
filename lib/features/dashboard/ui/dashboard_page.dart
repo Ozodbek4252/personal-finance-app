@@ -1,39 +1,98 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/icons/app_icons.dart';
-import '../../../core/widgets/buttons.dart';
-import '../../../core/widgets/page_title.dart';
-import '../../../router.dart';
-import '../../../shell/placeholder_body.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text.dart';
+import '../../../core/widgets/app_card.dart';
+import '../domain/dashboard_data.dart';
+import '../providers/dashboard_providers.dart';
+import 'widgets/balance_card.dart';
+import 'widgets/dashboard_header.dart';
+import 'widgets/empty_dashboard.dart';
+import 'widgets/month_summary_cards.dart';
+import 'widgets/recent_section.dart';
+import 'widgets/spending_sections.dart';
 
-/// Home tab. Placeholder until Task 5.
-class DashboardPage extends StatelessWidget {
+/// Home tab: balance, this month's numbers, spending and recent items.
+class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(dashboardProvider);
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          children: [
-            PageTitle(
-              'Home',
-              trailing: CircleIconButton.raised(
-                icon: AppIcons.search,
-                semanticLabel: 'Search transactions',
-                onTap: () => context.go(Routes.transactions),
+        child: CustomScrollView(
+          slivers: [
+            const SliverToBoxAdapter(child: DashboardHeader()),
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                // Room for the bottom nav that floats over the page.
+                28 + MediaQuery.paddingOf(context).bottom,
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: PlaceholderCard(
-                message: 'The Dashboard is built in Task 5.',
+              sliver: SliverList.list(
+                children: switch (data) {
+                  AsyncData(:final value) => _sections(value),
+                  AsyncError(:final error) => [_ErrorCard(error: error)],
+                  _ => const [BalanceCard()],
+                },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  List<Widget> _sections(DashboardData data) {
+    const gap = SizedBox(height: 16);
+    if (!data.hasAnyTransactions) {
+      return [
+        const BalanceCard(),
+        gap,
+        IncomeExpenseCards(data: data),
+        gap,
+        const EmptyDashboardCard(),
+      ];
+    }
+    return [
+      const BalanceCard(),
+      gap,
+      IncomeExpenseCards(data: data),
+      gap,
+      SavingsCard(data: data),
+      if (data.categories.isNotEmpty) ...[
+        gap,
+        SpendingByCategorySection(data: data),
+      ],
+      gap,
+      SpendingTrendSection(data: data),
+      if (data.insights.isNotEmpty) ...[
+        gap,
+        InsightsSection(insights: data.insights),
+      ],
+      gap,
+      const RecentSection(),
+    ];
+  }
+}
+
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Text(
+        'Could not load your data. Please restart the app.\n$error',
+        style: AppText.label14.copyWith(color: context.colors.expense),
       ),
     );
   }

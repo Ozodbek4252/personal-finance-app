@@ -45,6 +45,11 @@ void main() {
     );
   });
 
+  test('shortDay', () {
+    expect(DateText.shortDay(DateTime(2026, 9, 29, 18), now: now), 'Yesterday');
+    expect(DateText.shortDay(DateTime(2026, 9, 27), now: now), '27 Sep');
+  });
+
   test('range', () {
     expect(
       DateText.range(DateTime(2026, 9, 1), DateTime(2026, 9, 30)),

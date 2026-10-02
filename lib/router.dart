@@ -10,6 +10,7 @@ import 'features/settings/ui/settings_page.dart';
 import 'features/statistics/ui/statistics_page.dart';
 import 'features/transactions/ui/transactions_page.dart';
 import 'shell/app_shell.dart';
+import 'shell/placeholder_body.dart';
 
 /// All route paths in one place.
 abstract final class Routes {
@@ -23,6 +24,9 @@ abstract final class Routes {
   static const add = '/add';
   static const addExpense = '/add?type=expense';
   static const addIncome = '/add?type=income';
+
+  static const monthlyOverview = '/monthly';
+  static String transactionDetail(int id) => '/transaction/$id';
 
   static const designPreview = '/dev/preview';
 }
@@ -54,6 +58,24 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ? TransactionKind.income
                 : TransactionKind.expense,
           ),
+        ),
+      ),
+      GoRoute(
+        path: '/transaction/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => PlaceholderPage(
+          title: 'Transaction',
+          message:
+              'Transaction ${state.pathParameters['id']} details are built '
+              'in Task 9.',
+        ),
+      ),
+      GoRoute(
+        path: Routes.monthlyOverview,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const PlaceholderPage(
+          title: 'Monthly overview',
+          message: 'The Monthly overview is built in Task 12.',
         ),
       ),
       GoRoute(

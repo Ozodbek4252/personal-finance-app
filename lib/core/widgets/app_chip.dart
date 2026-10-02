@@ -38,6 +38,7 @@ class AppChip extends StatelessWidget {
     );
 
     return Semantics(
+      container: true,
       button: true,
       selected: selected,
       child: Material(

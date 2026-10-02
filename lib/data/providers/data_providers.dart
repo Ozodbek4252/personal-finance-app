@@ -51,6 +51,13 @@ final settingsProvider = StreamProvider<AppSettings>(
   (ref) => ref.watch(settingsRepositoryProvider).watch(),
 );
 
+/// The live settings, or the ones read at startup until they load.
+/// Never loading, so widgets can read it directly.
+final currentSettingsProvider = Provider<AppSettings>((ref) {
+  final live = ref.watch(settingsProvider);
+  return live.hasValue ? live.requireValue : ref.watch(initialSettingsProvider);
+});
+
 /// Active categories of one kind, in the user's order.
 final categoriesProvider =
     StreamProvider.family<List<CategoryRow>, TransactionKind>(

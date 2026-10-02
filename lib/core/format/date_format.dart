@@ -39,6 +39,10 @@ abstract final class DateText {
     return label == null ? dayMonthTime(d) : '$label, ${time(d)}';
   }
 
+  /// "Today", "Yesterday" or "27 Sep".
+  static String shortDay(DateTime d, {required DateTime now}) =>
+      _relativeDay(d, now) ?? _dayMonth.format(d);
+
   /// Header of a day group in the transaction list:
   /// "Today · 30 Sep", "Yesterday · 29 Sep", "Sunday · 27 Sep".
   static String dayGroup(DateTime d, {required DateTime now}) {

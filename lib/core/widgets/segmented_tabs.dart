@@ -87,6 +87,7 @@ class _Segment<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(AppRadius.tile);
     return Semantics(
+      container: true,
       button: true,
       selected: isSelected,
       child: GestureDetector(

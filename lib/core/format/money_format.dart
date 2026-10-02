@@ -55,11 +55,10 @@ abstract final class MoneyFormat {
   }
 
   /// One decimal place, without a trailing ".0": 14.5 → "14.5", 3.0 → "3".
+  /// Rounds like the design does: 3.05 → "3" (the double is 3.0499…).
   static String _trim(double v) {
-    final rounded = (v * 10).round() / 10;
-    return rounded == rounded.roundToDouble()
-        ? rounded.toInt().toString()
-        : rounded.toStringAsFixed(1);
+    final text = v.toStringAsFixed(1);
+    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
   }
 }
 

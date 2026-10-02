@@ -4,6 +4,9 @@ import 'package:flutter/widgets.dart';
 ///
 /// Names follow "size + weight". Styles have no color, so the
 /// widget's default text color is used unless you set one.
+///
+/// Do not change the weight with `copyWith(fontWeight: ...)`: a variable
+/// font also needs its weight axis changed. Pick another style instead.
 abstract final class AppText {
   static const fontFamily = 'Onest';
 
@@ -33,6 +36,7 @@ abstract final class AppText {
 
   static final label14Strong = _style(14, FontWeight.w600, 0);
   static final label14 = _style(14, FontWeight.w500, 0);
+  static final label14Regular = _style(14, FontWeight.w400, 0);
 
   static final caption13Strong = _style(13, FontWeight.w600, 0);
   static final caption13 = _style(13, FontWeight.w500, 0);
@@ -44,6 +48,7 @@ abstract final class AppText {
 
   static final small12Strong = _style(12, FontWeight.w600, 0);
   static final small12 = _style(12, FontWeight.w500, 0);
+  static final small12Regular = _style(12, FontWeight.w400, 0);
 
   /// Bottom nav labels.
   static final tiny11Strong = _style(11, FontWeight.w600, 0);

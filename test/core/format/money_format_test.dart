@@ -33,6 +33,10 @@ void main() {
     expect(MoneyFormat.compact(15000000), '15M');
     expect(MoneyFormat.compact(850000), '850K');
     expect(MoneyFormat.compact(500), '500');
+    // Same rounding as the design's chart labels.
+    expect(MoneyFormat.compact(3050000), '3M');
+    expect(MoneyFormat.compact(4650000), '4.7M');
+    expect(MoneyFormat.compact(3480000), '3.5M');
   });
 
   test('parseDigits ignores spaces and other symbols', () {

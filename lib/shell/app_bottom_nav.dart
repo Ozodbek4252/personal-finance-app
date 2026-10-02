@@ -107,6 +107,7 @@ class _NavItem extends StatelessWidget {
     final c = context.colors;
     final color = selected ? c.textPrimary : c.textTertiary;
     return Semantics(
+      container: true,
       button: true,
       selected: selected,
       label: tab.label,
@@ -151,6 +152,7 @@ class _AddButton extends StatelessWidget {
     final c = context.colors;
     const size = AppBottomNav.fabSize;
     return Semantics(
+      container: true,
       button: true,
       label: 'Add transaction',
       excludeSemantics: true,
