@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/format/date_format.dart';
 import '../core/format/money_format.dart';
+import '../core/icons/app_icons.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text.dart';
 import '../core/theme/app_tokens.dart';
 import '../core/theme/theme_mode_provider.dart';
+import '../core/widgets/buttons.dart';
 import '../core/widgets/segmented_tabs.dart';
 import 'widget_gallery.dart';
 
@@ -35,6 +37,12 @@ class _DesignPreviewPageState extends ConsumerState<DesignPreviewPage> {
           children: [
             Row(
               children: [
+                if (Navigator.canPop(context))
+                  CircleIconButton(
+                    icon: AppIcons.chevronLeft,
+                    semanticLabel: 'Back',
+                    onTap: () => Navigator.pop(context),
+                  ),
                 Expanded(child: Text('Design preview', style: AppText.title22)),
                 Switch(
                   value: isDark,

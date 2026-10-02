@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personal_finance/app.dart';
 import 'package:personal_finance/core/icons/app_icons.dart';
 import 'package:personal_finance/core/theme/app_theme.dart';
 import 'package:personal_finance/core/widgets/amount_text.dart';
 import 'package:personal_finance/core/widgets/app_chip.dart';
 import 'package:personal_finance/core/widgets/progress_bar.dart';
 import 'package:personal_finance/core/widgets/segmented_tabs.dart';
+import 'package:personal_finance/dev/design_preview_page.dart';
 
 Widget _wrap(Widget child, {ThemeData? theme}) => MaterialApp(
   theme: theme ?? AppTheme.light,
@@ -104,12 +104,13 @@ void main() {
         addTearDown(tester.view.reset);
 
         await tester.pumpWidget(
-          const ProviderScope(child: PersonalFinanceApp()),
+          ProviderScope(
+            child: MaterialApp(
+              theme: dark ? AppTheme.dark : AppTheme.light,
+              home: const DesignPreviewPage(),
+            ),
+          ),
         );
-        if (dark) {
-          await tester.tap(find.byType(Switch));
-          await tester.pumpAndSettle();
-        }
         for (final tab in ['Icons', 'Widgets']) {
           await tester.tap(find.text(tab));
           await tester.pumpAndSettle();

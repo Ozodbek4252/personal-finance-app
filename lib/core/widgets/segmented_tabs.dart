@@ -24,11 +24,15 @@ class SegmentedTabs<T> extends StatelessWidget {
     required this.options,
     required this.selected,
     required this.onChanged,
+    this.height = 36,
   });
 
   final List<SegmentOption<T>> options;
   final T selected;
   final ValueChanged<T> onChanged;
+
+  /// Height of one tab. Settings > Appearance uses 40.
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +53,7 @@ class SegmentedTabs<T> extends StatelessWidget {
               child: _Segment(
                 option: options[i],
                 isSelected: options[i].value == selected,
+                height: height,
                 onTap: () => onChanged(options[i].value),
                 colors: c,
                 brightness: brightness,
@@ -68,6 +73,7 @@ class _Segment<T> extends StatelessWidget {
     required this.onTap,
     required this.colors,
     required this.brightness,
+    required this.height,
   });
 
   final SegmentOption<T> option;
@@ -75,6 +81,7 @@ class _Segment<T> extends StatelessWidget {
   final VoidCallback onTap;
   final AppColors colors;
   final Brightness brightness;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +95,7 @@ class _Segment<T> extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          height: 36,
+          height: height,
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
