@@ -26,6 +26,7 @@ abstract final class Routes {
   static const addIncome = '/add?type=income';
 
   static const monthlyOverview = '/monthly';
+  static const categories = '/categories';
   static String transactionDetail(int id) => '/transaction/$id';
 
   static const designPreview = '/dev/preview';
@@ -76,6 +77,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const PlaceholderPage(
           title: 'Monthly overview',
           message: 'The Monthly overview is built in Task 12.',
+        ),
+      ),
+      GoRoute(
+        path: Routes.categories,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const PlaceholderPage(
+          title: 'Categories',
+          message: 'Managing categories is built in Task 13.',
         ),
       ),
       GoRoute(

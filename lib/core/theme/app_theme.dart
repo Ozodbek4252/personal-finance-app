@@ -49,6 +49,13 @@ abstract final class AppTheme {
         centerTitle: true,
         titleTextStyle: AppText.heading17.copyWith(color: c.textPrimary),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: c.primary,
+        contentTextStyle: AppText.label14.copyWith(color: c.onPrimary),
+        actionTextColor: c.onPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: c.surface,
         modalBackgroundColor: c.surface,

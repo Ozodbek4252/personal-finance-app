@@ -79,11 +79,15 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.icon,
+    this.background,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final AppIconData? icon;
+
+  /// Fill color. Defaults to the primary color; "Save income" is green.
+  final Color? background;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +99,7 @@ class PrimaryButton extends StatelessWidget {
       onPressed: onPressed,
       height: 56,
       radius: AppRadius.button,
-      background: enabled ? c.primary : c.surfaceMuted,
+      background: enabled ? (background ?? c.primary) : c.surfaceMuted,
       foreground: enabled ? c.onPrimary : c.textTertiary,
       textStyle: AppText.body16Strong,
     );

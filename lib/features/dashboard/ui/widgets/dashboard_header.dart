@@ -8,6 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/buttons.dart';
+import '../../../../core/widgets/option_sheet.dart';
 import '../../../../data/providers/data_providers.dart';
 import '../../../../router.dart';
 import '../../providers/dashboard_providers.dart';
@@ -80,69 +81,18 @@ class DashboardHeader extends ConsumerWidget {
 }
 
 /// Bottom sheet with the months that can be shown, newest first.
-Future<void> showMonthPicker(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    builder: (context) => const _MonthPickerSheet(),
+Future<void> showMonthPicker(BuildContext context) async {
+  final container = ProviderScope.containerOf(context);
+  final picked = await showOptionSheet<DateTime>(
+    context,
+    title: 'Choose month',
+    selected: container.read(selectedMonthProvider),
+    options: [
+      for (final m in container.read(selectableMonthsProvider))
+        SheetOption(value: m, label: DateText.monthYear(m)),
+    ],
   );
-}
-
-class _MonthPickerSheet extends ConsumerWidget {
-  const _MonthPickerSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.colors;
-    final months = ref.watch(selectableMonthsProvider);
-    final selected = ref.watch(selectedMonthProvider);
-
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.6,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('Choose month', style: AppText.heading17),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-                children: [
-                  for (final m in months)
-                    ListTile(
-                      minTileHeight: 52,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      title: Text(
-                        DateText.monthYear(m),
-                        style: m == selected
-                            ? AppText.body15Strong
-                            : AppText.body15,
-                      ),
-                      trailing: m == selected
-                          ? AppIcon(AppIcons.check, color: c.textPrimary)
-                          : null,
-                      selected: m == selected,
-                      onTap: () {
-                        ref.read(selectedMonthProvider.notifier).select(m);
-                        Navigator.pop(context);
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  if (picked != null) {
+    container.read(selectedMonthProvider.notifier).select(picked);
   }
 }

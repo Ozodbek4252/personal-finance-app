@@ -33,6 +33,11 @@ void testApp(
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    // Turns off endless animations (like the blinking amount cursor),
+    // so pumpAndSettle can finish.
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 
     final db = memoryDb();
     // Database work runs outside the fake test clock.
