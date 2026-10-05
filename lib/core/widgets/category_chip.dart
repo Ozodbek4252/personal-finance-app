@@ -14,11 +14,15 @@ class CategoryChip extends StatelessWidget {
     required this.category,
     required this.selected,
     required this.onTap,
+    this.label,
   });
 
   final CategoryRow category;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Text to show. Defaults to the category name.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +39,7 @@ class CategoryChip extends StatelessWidget {
       container: true,
       button: true,
       selected: selected,
-      label: category.name,
+      label: label ?? category.name,
       excludeSemantics: true,
       child: Material(
         color: selected ? soft : c.surface,
@@ -62,7 +66,7 @@ class CategoryChip extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  category.name,
+                  label ?? category.name,
                   style: selected ? AppText.label14Strong : AppText.label14,
                 ),
               ],

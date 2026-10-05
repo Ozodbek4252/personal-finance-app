@@ -58,8 +58,8 @@ class MonthBarChart extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           for (final bar in bars)
-            SizedBox(
-              width: _barWidth + 16,
+            // Each bar gets an equal share, so narrow screens still fit.
+            Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

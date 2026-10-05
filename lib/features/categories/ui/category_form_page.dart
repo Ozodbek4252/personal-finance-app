@@ -296,8 +296,10 @@ class _CategoryFormPageState extends ConsumerState<CategoryFormPage> {
                   const _Label('Color'),
                   AppCard(
                     padding: const EdgeInsets.all(20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // Wraps to a second line on narrow screens.
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      runSpacing: 14,
                       children: [
                         for (final cc in CategoryColor.pickable)
                           _ColorOption(

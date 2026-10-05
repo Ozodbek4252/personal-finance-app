@@ -22,6 +22,8 @@ Future<bool?> showDeleteConfirmSheet(
   return showModalBottomSheet<bool>(
     context: context,
     useRootNavigator: true,
+    // Taller than the default half screen, for small phones and big text.
+    isScrollControlled: true,
     backgroundColor: Colors.transparent,
     showDragHandle: false,
     elevation: 0,
@@ -43,7 +45,7 @@ class _DeleteConfirm extends ConsumerWidget {
     final isIncome = item.kind == TransactionKind.income;
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
         child: Container(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),

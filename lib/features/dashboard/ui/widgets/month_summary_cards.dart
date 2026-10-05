@@ -95,9 +95,13 @@ class _StatCard extends StatelessWidget {
                 background: background,
               ),
               const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppText.label14.copyWith(color: c.textSecondary),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.label14.copyWith(color: c.textSecondary),
+                ),
               ),
             ],
           ),

@@ -459,10 +459,14 @@ class SpendingTrendCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  '6-${data.period.unit.name} average · '
-                  '${MoneyFormat.withCurrency(_roundThousand(data.averageExpense))}',
-                  style: AppText.small12Regular.copyWith(color: c.textTertiary),
+                Expanded(
+                  child: Text(
+                    '6-${data.period.unit.name} average · '
+                    '${MoneyFormat.withCurrency(_roundThousand(data.averageExpense))}',
+                    style: AppText.small12Regular.copyWith(
+                      color: c.textTertiary,
+                    ),
+                  ),
                 ),
               ],
             ),

@@ -109,6 +109,10 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
     final categories = <CategoryRow>[
       for (final k in kinds) ...?ref.watch(categoriesProvider(k)).value,
     ];
+    final expenseNames = {
+      for (final c in categories)
+        if (c.kind == TransactionKind.expense) c.name,
+    };
     // Live count for the button, using the edited filters.
     final count = ref
         .watch(periodTransactionsProvider(_draft.period ?? allTimeRange))
@@ -190,6 +194,12 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                         for (final cat in categories)
                           CategoryChip(
                             category: cat,
+                            // "Other" exists for both kinds; say which.
+                            label:
+                                cat.kind == TransactionKind.income &&
+                                    expenseNames.contains(cat.name)
+                                ? '${cat.name} · income'
+                                : null,
                             selected: _draft.categoryIds.contains(cat.id),
                             onTap: () {
                               final ids = {..._draft.categoryIds};

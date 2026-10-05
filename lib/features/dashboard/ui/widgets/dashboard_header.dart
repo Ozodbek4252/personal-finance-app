@@ -51,9 +51,13 @@ class DashboardHeader extends ConsumerWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            DateText.monthYear(month),
-                            style: AppText.title22,
+                          Flexible(
+                            child: Text(
+                              DateText.monthYear(month),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.title22,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           AppIcon(
