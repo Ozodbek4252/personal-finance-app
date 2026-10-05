@@ -201,6 +201,16 @@ class AddTransactionPage extends ConsumerWidget {
             leading: AppIcon(m.icon, size: 20),
           ),
       ],
+      footer: Builder(
+        builder: (sheetContext) => TextActionButton(
+          label: 'Manage payment methods',
+          icon: AppIcons.settings,
+          onPressed: () {
+            Navigator.pop(sheetContext);
+            context.push(Routes.paymentMethods);
+          },
+        ),
+      ),
     );
     if (picked != null) controller.selectPaymentMethod(picked);
   }
