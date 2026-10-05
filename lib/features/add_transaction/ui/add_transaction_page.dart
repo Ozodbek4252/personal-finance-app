@@ -18,6 +18,7 @@ import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
 import '../../../router.dart';
+import '../../receipts/receipt_widgets.dart';
 import '../providers/add_transaction_controller.dart';
 import 'widgets/amount_display.dart';
 import 'widgets/category_grid.dart';
@@ -77,6 +78,7 @@ class AddTransactionPage extends ConsumerWidget {
                       method: method,
                       note: state.note,
                       showReceipt: !isIncome,
+                      hasReceipt: state.receipt != null,
                       onDay: () => _pickDay(context, ref, state.day, now),
                       onMethod: () => _pickMethod(context, ref, methods),
                       onNote: () async {
@@ -86,10 +88,7 @@ class AddTransactionPage extends ConsumerWidget {
                         );
                         if (note != null) controller.setNote(note);
                       },
-                      onReceipt: () => _showMessage(
-                        context,
-                        'Receipt photos are coming in a later update.',
-                      ),
+                      onReceipt: () => _receipt(context, ref, state.receipt),
                     ),
                     const SizedBox(height: 12),
                     _GroupHeader(
@@ -239,6 +238,29 @@ class AddTransactionPage extends ConsumerWidget {
     if (picked != null) ref.read(provider.notifier).selectCategory(picked);
   }
 
+  /// Attaches a receipt photo, or offers to replace or remove it.
+  Future<void> _receipt(
+    BuildContext context,
+    WidgetRef ref,
+    String? current,
+  ) async {
+    final controller = ref.read(addTransactionProvider(initialKind).notifier);
+    if (current != null) {
+      final action = await showOptionSheet<String>(
+        context,
+        title: 'Receipt photo',
+        options: const [
+          SheetOption(value: 'replace', label: 'Replace photo'),
+          SheetOption(value: 'remove', label: 'Remove photo'),
+        ],
+      );
+      if (action == 'remove') controller.setReceipt(null);
+      if (action != 'replace' || !context.mounted) return;
+    }
+    final name = await pickReceipt(context, ref);
+    if (name != null) controller.setReceipt(name);
+  }
+
   static void _showMessage(BuildContext context, String text) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -300,6 +322,7 @@ class _QuickChips extends StatelessWidget {
     required this.method,
     required this.note,
     required this.showReceipt,
+    required this.hasReceipt,
     required this.onDay,
     required this.onMethod,
     required this.onNote,
@@ -310,6 +333,7 @@ class _QuickChips extends StatelessWidget {
   final PaymentMethodRow? method;
   final String? note;
   final bool showReceipt;
+  final bool hasReceipt;
   final VoidCallback onDay;
   final VoidCallback onMethod;
   final VoidCallback onNote;
@@ -333,7 +357,15 @@ class _QuickChips extends StatelessWidget {
           leadingIcon: AppIcons.pencil,
           onTap: onNote,
         ),
-        if (showReceipt)
+        if (showReceipt && hasReceipt)
+          AppChip(
+            label: 'Receipt',
+            selected: true,
+            leadingIcon: AppIcons.paperclip,
+            semanticLabel: 'Receipt attached',
+            onTap: onReceipt,
+          )
+        else if (showReceipt)
           Semantics(
             container: true,
             button: true,

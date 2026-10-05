@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/transaction_details.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
+import '../../../data/receipts/receipt_store.dart';
 import '../domain/amount_input.dart';
 
 /// What the user has entered on the add screen so far.
@@ -14,6 +15,7 @@ class AddTransactionState {
     this.categoryIds = const {},
     this.paymentMethodId,
     this.note,
+    this.receipt,
   });
 
   final TransactionKind kind;
@@ -31,6 +33,9 @@ class AddTransactionState {
   final DateTime day;
   final String? note;
 
+  /// Stored file name of the receipt photo, if one was attached.
+  final String? receipt;
+
   int get amount => AmountInput.toAmount(digits);
   int? get categoryId => categoryIds[kind];
   bool get canSave => amount > 0 && categoryId != null;
@@ -42,6 +47,7 @@ class AddTransactionState {
     int? paymentMethodId,
     DateTime? day,
     String? Function()? note,
+    String? Function()? receipt,
   }) => AddTransactionState(
     kind: kind ?? this.kind,
     digits: digits ?? this.digits,
@@ -49,6 +55,7 @@ class AddTransactionState {
     paymentMethodId: paymentMethodId ?? this.paymentMethodId,
     day: day ?? this.day,
     note: note == null ? this.note : note(),
+    receipt: receipt == null ? this.receipt : receipt(),
   );
 }
 
@@ -67,11 +74,23 @@ class AddTransactionController extends Notifier<AddTransactionState> {
   /// True while a save is running, so a double tap saves only once.
   bool _saving = false;
 
+  /// True after the transaction was saved with its receipt.
+  bool _receiptSaved = false;
+
   @override
-  AddTransactionState build() => AddTransactionState(
-    kind: _initialKind,
-    day: ref.read(clockProvider).now(),
-  );
+  AddTransactionState build() {
+    // A photo attached but never saved is not needed. The store is read
+    // here because `ref` cannot be used while the provider is disposed.
+    final store = ref.read(receiptStoreProvider);
+    ref.onDispose(() {
+      final receipt = state.receipt;
+      if (receipt != null && !_receiptSaved) store.delete(receipt);
+    });
+    return AddTransactionState(
+      kind: _initialKind,
+      day: ref.read(clockProvider).now(),
+    );
+  }
 
   void setKind(TransactionKind kind) => state = state.copyWith(kind: kind);
 
@@ -88,6 +107,15 @@ class AddTransactionController extends Notifier<AddTransactionState> {
       state = state.copyWith(paymentMethodId: id);
 
   void selectDay(DateTime day) => state = state.copyWith(day: day);
+
+  /// Attaches a stored receipt photo; the old one (if any) is removed.
+  void setReceipt(String? name) {
+    final old = state.receipt;
+    if (old != null && old != name) {
+      ref.read(receiptStoreProvider).delete(old);
+    }
+    state = state.copyWith(receipt: () => name);
+  }
 
   void setNote(String? note) => state = state.copyWith(
     note: () => note == null || note.trim().isEmpty ? null : note.trim(),
@@ -125,7 +153,7 @@ class AddTransactionController extends Notifier<AddTransactionState> {
     );
 
     try {
-      return await ref
+      final id = await ref
           .read(transactionRepositoryProvider)
           .add(
             TransactionDraft(
@@ -135,8 +163,11 @@ class AddTransactionController extends Notifier<AddTransactionState> {
               paymentMethodId: methodId,
               occurredAt: occurredAt,
               note: s.note,
+              receiptPath: s.receipt,
             ),
           );
+      _receiptSaved = true;
+      return id;
     } finally {
       _saving = false;
     }

@@ -17,7 +17,9 @@ import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_details.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
+import '../../../data/receipts/receipt_store.dart';
 import '../../../router.dart';
+import '../../receipts/receipt_widgets.dart';
 import 'delete_confirm_sheet.dart';
 
 /// Full details of one transaction, with Edit, Duplicate and Delete.
@@ -229,7 +231,7 @@ class _Body extends StatelessWidget {
         ),
         if (row.receiptPath != null) ...[
           const SizedBox(height: 16),
-          _ReceiptCard(path: row.receiptPath!),
+          _ReceiptCard(name: row.receiptPath!),
         ],
         const SizedBox(height: 16),
         _CategoryInsight(item: item),
@@ -361,15 +363,18 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _ReceiptCard extends StatelessWidget {
-  const _ReceiptCard({required this.path});
+class _ReceiptCard extends ConsumerWidget {
+  const _ReceiptCard({required this.name});
 
-  final String path;
+  final String name;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final file = ref.watch(receiptFileProvider(name)).value;
+    final kb = file == null ? null : (file.lengthSync() / 1024).round();
     return AppCard(
+      onTap: () => showReceiptViewer(context, ref, name),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -380,30 +385,24 @@ class _ReceiptCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Container(
-                width: 56,
-                height: 72,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: c.surfaceMuted,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: c.divider),
-                ),
-                child: AppIcon(
-                  AppIcons.receipt,
-                  size: 24,
-                  strokeWidth: 1.5,
-                  color: c.textTertiary,
-                ),
-              ),
+              ReceiptThumb(name: name),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  path.split('/').last,
-                  style: AppText.body15,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Receipt photo', style: AppText.body15),
+                    const SizedBox(height: 2),
+                    Text(
+                      file == null ? 'File not found' : 'Photo · $kb KB',
+                      style: AppText.caption13Regular.copyWith(
+                        color: c.textTertiary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              AppIcon(AppIcons.chevronRight, size: 18, color: c.textTertiary),
             ],
           ),
         ],

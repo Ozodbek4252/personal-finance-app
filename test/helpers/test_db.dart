@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meta/meta.dart';
 import 'package:personal_finance/app.dart';
@@ -28,6 +29,7 @@ void testApp(
   String description,
   Future<void> Function(WidgetTester tester, AppDatabase db) body, {
   bool sampleData = false,
+  List<Override> overrides = const [],
 }) {
   testWidgets(description, (tester) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -41,11 +43,14 @@ void testApp(
 
     final db = memoryDb();
     // Database work runs outside the fake test clock.
-    final overrides = (await tester.runAsync(
+    final appOverrides = (await tester.runAsync(
       () => bootstrap(db, sampleData: sampleData),
     ))!;
     await tester.pumpWidget(
-      ProviderScope(overrides: overrides, child: const PersonalFinanceApp()),
+      ProviderScope(
+        overrides: [...appOverrides, ...overrides],
+        child: const PersonalFinanceApp(),
+      ),
     );
     await tester.pumpAndSettle();
 

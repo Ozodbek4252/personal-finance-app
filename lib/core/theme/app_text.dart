@@ -28,6 +28,7 @@ abstract final class AppText {
   static final heading17 = _style(17, FontWeight.w600, -0.01);
   static final body17 = _style(17, FontWeight.w500, 0);
   static final body16Strong = _style(16, FontWeight.w600, 0);
+  static final body16 = _style(16, FontWeight.w500, 0);
   static final body16Regular = _style(16, FontWeight.w400, 0);
 
   // Most list text.
