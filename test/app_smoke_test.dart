@@ -75,6 +75,15 @@ void main() {
     await tester.tap(_tab('Settings'));
     await tester.pumpAndSettle();
 
+    // The row is near the bottom; scroll it clear of the bottom nav.
+    final scrollable = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(
+      find.text('Design preview'),
+      300,
+      scrollable: scrollable,
+    );
+    await tester.drag(scrollable, const Offset(0, -200));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Design preview'));
     await tester.pumpAndSettle();
     expect(find.text('Tokens'), findsOneWidget);

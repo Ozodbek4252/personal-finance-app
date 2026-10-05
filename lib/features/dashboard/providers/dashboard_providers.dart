@@ -25,17 +25,13 @@ final selectableMonthsProvider = Provider<List<DateTime>>((ref) {
   final totals = ref.watch(monthTotalsProvider).value ?? const [];
   var first = totals.isEmpty ? now : totals.first.month;
   if (first.isAfter(now)) first = now;
-  return [
-    for (var m = now; !m.isBefore(first); m = DateTime(m.year, m.month - 1)) m,
-  ];
+  return [for (var m = now; !m.isBefore(first); m = shiftMonths(m, -1)) m];
 });
 
 final dashboardProvider = Provider<AsyncValue<DashboardData>>((ref) {
   final month = ref.watch(selectedMonthProvider);
   final current = ref.watch(monthTransactionsProvider(month));
-  final previous = ref.watch(
-    monthTransactionsProvider(DateTime(month.year, month.month - 1)),
-  );
+  final previous = ref.watch(monthTransactionsProvider(shiftMonths(month, -1)));
   final totals = ref.watch(monthTotalsProvider);
 
   return combine3(current, previous, totals).whenData(

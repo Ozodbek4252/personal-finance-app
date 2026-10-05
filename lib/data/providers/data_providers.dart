@@ -91,6 +91,11 @@ final monthTotalsProvider = StreamProvider<List<MonthTotals>>(
   (ref) => ref.watch(transactionRepositoryProvider).watchMonthTotals(),
 );
 
+/// Number of all transactions, for the Settings profile card.
+final transactionCountProvider = StreamProvider<int>(
+  (ref) => ref.watch(transactionRepositoryProvider).watchCount(),
+);
+
 /// Balance of each payment method, by method id.
 final balancesProvider = StreamProvider<Map<int, int>>(
   (ref) => ref.watch(transactionRepositoryProvider).watchBalances(),

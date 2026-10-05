@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/misc.dart';
 
+import '../core/format/money_format.dart';
 import '../core/time/clock.dart';
 import 'db/app_database.dart';
 import 'db/seed.dart';
@@ -26,6 +27,9 @@ Future<List<Override>> bootstrap(
   if (sampleData) await seedSampleData(db);
 
   final settings = await SettingsRepository(db).load();
+  // Set before the first frame, so the first screen uses them.
+  MoneyFormat.style = settings.numberStyle;
+  MonthCycle.startDay = settings.monthStartDay;
   return [
     databaseProvider.overrideWithValue(db),
     initialSettingsProvider.overrideWithValue(settings),

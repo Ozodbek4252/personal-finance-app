@@ -1,3 +1,4 @@
+import '../../../core/time/clock.dart';
 import '../../../data/models/month_totals.dart';
 
 /// One month with its changes compared with the month before.
@@ -74,7 +75,7 @@ class MonthlyOverviewData {
           MonthComparison(
             month: m,
             previous:
-                byMonth[DateTime(m.month.year, m.month.month - 1)] ??
+                byMonth[shiftMonths(m.month, -1)] ??
                 // A gap (a month with no data) still compares with the
                 // latest month before it.
                 _latestBefore(allMonths, m.month),

@@ -26,6 +26,17 @@ class TransactionRepository {
     return query.watch().map((rows) => rows.map(_toDetails).toList());
   }
 
+  /// Like [watchBetween], but reads once.
+  Future<List<TransactionDetails>> getBetween(DateTime from, DateTime to) {
+    final t = _db.transactions;
+    final query = _joined()
+      ..where(
+        t.occurredAt.isBiggerOrEqualValue(from) &
+            t.occurredAt.isSmallerThanValue(to),
+      );
+    return query.get().then((rows) => rows.map(_toDetails).toList());
+  }
+
   /// The newest [limit] transactions.
   Stream<List<TransactionDetails>> watchRecent({int limit = 4}) {
     final query = _joined()..limit(limit);
@@ -86,6 +97,9 @@ class TransactionRepository {
       },
     );
   }
+
+  /// Number of all transactions.
+  Stream<int> watchCount() => _db.transactions.count().watchSingle();
 
   /// Saves a new transaction and returns its id.
   Future<int> add(TransactionDraft draft) {

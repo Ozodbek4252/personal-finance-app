@@ -1,7 +1,24 @@
+/// How thousands are grouped: "15 000 000", "15,000,000" or "15.000.000".
+/// Chosen in Settings > Number format.
+enum NumberStyle {
+  space('\u00A0'),
+  comma(','),
+  dot('.');
+
+  const NumberStyle(this.separator);
+  final String separator;
+
+  /// Example shown in Settings.
+  String get example => '15${separator}000${separator}000';
+}
+
 /// Formats money amounts the way the design shows them.
 ///
 /// Amounts are whole UZS stored as [int]. We never use doubles for money.
 abstract final class MoneyFormat {
+  /// Set from Settings when the app starts and when the setting changes.
+  static NumberStyle style = NumberStyle.space;
+
   /// Non-breaking space. Keeps "12 450 000" on one line.
   static const nbsp = ' ';
 
@@ -15,7 +32,9 @@ abstract final class MoneyFormat {
     final digits = value.abs().toString();
     final buffer = StringBuffer();
     for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(nbsp);
+      if (i > 0 && (digits.length - i) % 3 == 0) {
+        buffer.write(style.separator);
+      }
       buffer.write(digits[i]);
     }
     return value < 0 ? '$minus$buffer' : buffer.toString();

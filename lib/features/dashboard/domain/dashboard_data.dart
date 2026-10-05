@@ -1,6 +1,7 @@
 import '../../../core/format/date_format.dart';
 import '../../../core/format/money_format.dart';
 import '../../../core/icons/app_icons.dart';
+import '../../../core/time/clock.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/display_style.dart';
@@ -88,7 +89,7 @@ class DashboardData {
     required List<MonthTotals> allMonths,
   }) {
     final byMonth = {for (final m in allMonths) m.month: m};
-    final prevMonth = DateTime(month.year, month.month - 1);
+    final prevMonth = shiftMonths(month, -1);
     final current =
         byMonth[month] ?? MonthTotals(month: month, income: 0, expense: 0);
     final previous = byMonth[prevMonth];
@@ -98,12 +99,8 @@ class DashboardData {
 
     final trend = [
       for (var i = 5; i >= 0; i--)
-        byMonth[DateTime(month.year, month.month - i)] ??
-            MonthTotals(
-              month: DateTime(month.year, month.month - i),
-              income: 0,
-              expense: 0,
-            ),
+        byMonth[shiftMonths(month, -i)] ??
+            MonthTotals(month: shiftMonths(month, -i), income: 0, expense: 0),
     ];
 
     return DashboardData(
@@ -239,10 +236,9 @@ class DashboardData {
         // Better than every month: "since <first tracked month>".
         suffix =
             ' — your best month since ${DateText.month(earlier.first.month)}.';
-      } else if (beaten.first.month !=
-          DateTime(current.month.year, current.month.month - 1)) {
+      } else if (beaten.first.month != shiftMonths(current.month, -1)) {
         final last = beaten.first.month;
-        final after = DateTime(last.year, last.month + 1);
+        final after = shiftMonths(last, 1);
         suffix = ' — your best month since ${DateText.month(after)}.';
       }
     }

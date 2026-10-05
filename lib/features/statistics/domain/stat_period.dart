@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import '../../../core/format/date_format.dart';
+import '../../../core/time/clock.dart';
 import '../../transactions/domain/transaction_filter.dart';
 
 /// The size of one period on the Statistics screen.
@@ -24,7 +25,7 @@ class StatPeriod {
         day.month,
         day.day - (day.weekday - DateTime.monday),
       ),
-      PeriodUnit.month => DateTime(day.year, day.month),
+      PeriodUnit.month => monthStart(day),
       PeriodUnit.year => DateTime(day.year),
     };
     return StatPeriod._(unit, start);
@@ -54,7 +55,7 @@ class StatPeriod {
 
   StatPeriod _shift(int n) => StatPeriod._(unit, switch (unit) {
     PeriodUnit.week => DateTime(start.year, start.month, start.day + 7 * n),
-    PeriodUnit.month => DateTime(start.year, start.month + n),
+    PeriodUnit.month => shiftMonths(start, n),
     PeriodUnit.year => DateTime(start.year + n),
   });
 

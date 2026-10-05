@@ -25,8 +25,26 @@ class ShiftedClock implements Clock {
   DateTime now() => start.add(_watch.elapsed);
 }
 
-/// Midnight on the first day of [d]'s month.
-DateTime monthStart(DateTime d) => DateTime(d.year, d.month);
+/// The day of the month on which a "month" starts (1–28).
+///
+/// Set from Settings > Month starts on. With 25, the September month runs
+/// from 25 September to 24 October. Every month calculation in the app goes
+/// through [monthStart], [nextMonthStart] and [shiftMonths].
+abstract final class MonthCycle {
+  static int startDay = 1;
+}
+
+/// Midnight on the first day of the month that contains [d].
+DateTime monthStart(DateTime d) {
+  final s = MonthCycle.startDay;
+  return d.day >= s
+      ? DateTime(d.year, d.month, s)
+      : DateTime(d.year, d.month - 1, s);
+}
 
 /// Midnight on the first day of the month after [d]'s month.
-DateTime nextMonthStart(DateTime d) => DateTime(d.year, d.month + 1);
+DateTime nextMonthStart(DateTime d) => shiftMonths(monthStart(d), 1);
+
+/// Moves a month start (from [monthStart]) by [n] months.
+DateTime shiftMonths(DateTime start, int n) =>
+    DateTime(start.year, start.month + n, start.day);

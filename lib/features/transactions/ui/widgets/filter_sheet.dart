@@ -52,10 +52,10 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
     return switch (p) {
       _DatePreset.thisMonth => DateRange.month(now),
       _DatePreset.lastMonth => DateRange.month(
-        DateTime(now.year, now.month - 1),
+        shiftMonths(monthStart(now), -1),
       ),
       _DatePreset.threeMonths => DateRange(
-        DateTime(now.year, now.month - 2),
+        shiftMonths(monthStart(now), -2),
         nextMonthStart(now),
       ),
       _DatePreset.custom => _draft.period ?? DateRange.month(now),
