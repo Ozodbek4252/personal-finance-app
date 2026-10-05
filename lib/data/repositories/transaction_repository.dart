@@ -109,6 +109,14 @@ class TransactionRepository {
     await (_db.delete(_db.transactions)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Puts a deleted transaction back exactly as it was (same id).
+  /// Used by "Undo" after a delete.
+  Future<void> restore(TransactionRow row) async {
+    await _db
+        .into(_db.transactions)
+        .insert(row, mode: InsertMode.insertOrReplace);
+  }
+
   /// Copies a transaction with the current date and time.
   /// Returns the new id.
   Future<int> duplicate(int id) async {

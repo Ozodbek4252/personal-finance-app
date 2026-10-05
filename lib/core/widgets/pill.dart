@@ -9,32 +9,45 @@ import '../theme/app_tokens.dart';
 /// Examples: "Humo 6 400 000" on the balance card,
 /// "Default" on a payment method.
 class Pill extends StatelessWidget {
-  const Pill(this.text, {super.key, this.background, this.foreground})
-    : _badge = false;
+  const Pill(
+    this.text, {
+    super.key,
+    this.background,
+    this.foreground,
+    this.strong = false,
+  }) : _badge = false;
 
   /// A stronger label with bigger, bold text, like "80% of income".
   const Pill.badge(this.text, {super.key, this.background, this.foreground})
-    : _badge = true;
+    : _badge = true,
+      strong = true;
 
   final String text;
   final Color? background;
   final Color? foreground;
   final bool _badge;
 
+  /// Bold 12 px text, like the "Expense" label on the details screen.
+  final bool strong;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: _badge ? 4 : 5),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: strong ? 4 : 5),
       decoration: BoxDecoration(
         color: background ?? c.surfaceMuted,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
         text,
-        style: (_badge ? AppText.caption13Strong : AppText.small12).copyWith(
-          color: foreground ?? c.textSecondary,
-        ),
+        style:
+            (_badge
+                    ? AppText.caption13Strong
+                    : strong
+                    ? AppText.small12Strong
+                    : AppText.small12)
+                .copyWith(color: foreground ?? c.textSecondary),
       ),
     );
   }

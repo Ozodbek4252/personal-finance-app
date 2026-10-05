@@ -8,6 +8,7 @@ import 'features/add_transaction/ui/add_transaction_page.dart';
 import 'features/dashboard/ui/dashboard_page.dart';
 import 'features/settings/ui/settings_page.dart';
 import 'features/statistics/ui/statistics_page.dart';
+import 'features/transaction_detail/ui/transaction_detail_page.dart';
 import 'features/transactions/ui/transactions_page.dart';
 import 'shell/app_shell.dart';
 import 'shell/placeholder_body.dart';
@@ -28,6 +29,7 @@ abstract final class Routes {
   static const monthlyOverview = '/monthly';
   static const categories = '/categories';
   static String transactionDetail(int id) => '/transaction/$id';
+  static String editTransaction(int id) => '/transaction/$id/edit';
 
   static const designPreview = '/dev/preview';
 }
@@ -64,12 +66,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/transaction/:id',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => PlaceholderPage(
-          title: 'Transaction',
-          message:
-              'Transaction ${state.pathParameters['id']} details are built '
-              'in Task 9.',
+        builder: (context, state) => TransactionDetailPage(
+          id: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
         ),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => const PlaceholderPage(
+              title: 'Edit transaction',
+              message: 'Editing is built in Task 10.',
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: Routes.monthlyOverview,

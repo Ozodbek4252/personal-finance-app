@@ -78,6 +78,17 @@ void main() {
       expect(await transactions.watchById(id).first, isNull);
     });
 
+    test('restore puts a deleted row back with the same id', () async {
+      final id = await transactions.add(
+        expense(420000, DateTime(2026, 9, 30, 13, 40), note: 'Korzinka'),
+      );
+      final row = (await transactions.watchById(id).first)!.transaction;
+      await transactions.delete(id);
+      await transactions.restore(row);
+      final back = (await transactions.watchById(id).first)!;
+      expect(back.transaction, row);
+    });
+
     test('duplicate copies values with the current time', () async {
       final id = await transactions.add(
         expense(96000, DateTime(2026, 9, 25, 19, 2), note: 'Makro'),
