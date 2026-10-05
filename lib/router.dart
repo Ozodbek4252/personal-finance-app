@@ -7,6 +7,7 @@ import 'data/models/transaction_kind.dart';
 import 'features/add_transaction/ui/add_transaction_page.dart';
 import 'features/dashboard/ui/dashboard_page.dart';
 import 'features/edit_transaction/ui/edit_transaction_page.dart';
+import 'features/monthly_overview/ui/monthly_overview_page.dart';
 import 'features/settings/ui/settings_page.dart';
 import 'features/statistics/ui/statistics_page.dart';
 import 'features/transaction_detail/ui/transaction_detail_page.dart';
@@ -83,10 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.monthlyOverview,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const PlaceholderPage(
-          title: 'Monthly overview',
-          message: 'The Monthly overview is built in Task 12.',
-        ),
+        builder: (context, state) => const MonthlyOverviewPage(),
       ),
       GoRoute(
         path: Routes.categories,
