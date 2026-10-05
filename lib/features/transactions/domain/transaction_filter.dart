@@ -19,12 +19,15 @@ enum TypeFilter {
 }
 
 enum SortOrder {
-  newest('Newest first'),
-  oldest('Oldest first'),
-  largest('Largest amount');
+  newest('Newest first', 'Newest'),
+  oldest('Oldest first', 'Oldest'),
+  largest('Largest amount', 'Largest');
 
-  const SortOrder(this.label);
+  const SortOrder(this.label, this.shortLabel);
   final String label;
+
+  /// For the small sort chip in results mode.
+  final String shortLabel;
 
   /// Date orders show day groups; amount order shows one flat list.
   bool get groupsByDay => this != largest;
@@ -85,6 +88,13 @@ class TransactionFilter {
     categoryIds: categoryIds ?? this.categoryIds,
     sort: sort ?? this.sort,
   );
+
+  /// True when search text, a type or a category narrows the list.
+  /// Then the screen shows "N results" instead of the normal totals.
+  bool get hasFilters =>
+      query.trim().isNotEmpty ||
+      type != TypeFilter.all ||
+      categoryIds.isNotEmpty;
 
   /// True if [t] passes the type, category and search filters.
   /// The period is applied by the database query.

@@ -4,8 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/date_format.dart';
 import '../../../core/icons/app_icons.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_chip.dart';
 import '../../../core/widgets/buttons.dart';
@@ -22,10 +20,16 @@ import '../../../router.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../domain/transaction_filter.dart';
 import '../providers/transactions_providers.dart';
+import 'widgets/filter_sheet.dart';
 import 'widgets/transaction_list_parts.dart';
 import 'widgets/transaction_tile.dart';
 
-/// Transactions tab: search, filter chips, totals and the list.
+/// Transactions tab.
+///
+/// Normal mode shows In/Out/Net totals and a list grouped by day.
+/// When search text, a type or a category is set, it switches to
+/// results mode: removable filter chips, "N results" and a flat list
+/// with the search text highlighted.
 class TransactionsPage extends ConsumerWidget {
   const TransactionsPage({super.key});
 
@@ -63,13 +67,7 @@ class TransactionsPage extends ConsumerWidget {
                     CircleIconButton.raised(
                       icon: AppIcons.filter,
                       semanticLabel: 'Filters',
-                      onTap: () => ScaffoldMessenger.of(context)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                          const SnackBar(
-                            content: Text('The filter sheet comes in Task 8.'),
-                          ),
-                        ),
+                      onTap: () => showFilterSheet(context),
                     ),
                   ],
                 ),
@@ -90,36 +88,26 @@ class TransactionsPage extends ConsumerWidget {
             gap,
             SliverToBoxAdapter(
               child: ChipRow(
-                children: [
-                  for (final t in TypeFilter.values)
-                    AppChip(
-                      label: t.label,
-                      selected: filter.type == t,
-                      onTap: () => notifier.setType(t),
-                    ),
-                  AppChip(
-                    label: _periodLabel(filter.period),
-                    leadingIcon: AppIcons.calendar,
-                    trailingIcon: AppIcons.chevronDown,
-                    onTap: () => _pickPeriod(context, ref),
-                  ),
-                  AppChip(
-                    label: _categoryLabel(filter.categoryIds, categoryNames),
-                    selected: filter.categoryIds.isNotEmpty,
-                    trailingIcon: AppIcons.chevronDown,
-                    onTap: () => _pickCategory(context, ref),
-                  ),
-                ],
+                children: filter.hasFilters
+                    ? _activeChips(context, ref, filter, categoryNames)
+                    : _browseChips(context, ref, filter, categoryNames),
               ),
             ),
             gap,
             ...switch (list) {
-              AsyncData(:final value) => _listSlivers(context, value, now),
+              AsyncData(:final value) => _listSlivers(
+                context,
+                ref,
+                value,
+                filter,
+                categoryNames,
+                now,
+              ),
               AsyncError(:final error) => [
                 SliverPadding(
                   padding: side,
                   sliver: SliverToBoxAdapter(
-                    child: _MessageCard(text: 'Could not load: $error'),
+                    child: AppCard(child: Text('Could not load: $error')),
                   ),
                 ),
               ],
@@ -137,24 +125,157 @@ class TransactionsPage extends ConsumerWidget {
     );
   }
 
+  /// Chips in normal mode: type, period and category pickers.
+  List<Widget> _browseChips(
+    BuildContext context,
+    WidgetRef ref,
+    TransactionFilter filter,
+    Map<int, String> names,
+  ) {
+    final notifier = ref.read(transactionFilterProvider.notifier);
+    return [
+      for (final t in TypeFilter.values)
+        AppChip(
+          label: t.label,
+          selected: filter.type == t,
+          onTap: () => notifier.setType(t),
+        ),
+      AppChip(
+        label: periodLabel(filter.period),
+        leadingIcon: AppIcons.calendar,
+        trailingIcon: AppIcons.chevronDown,
+        onTap: () => _pickPeriod(context, ref),
+      ),
+      AppChip(
+        label: 'Category',
+        trailingIcon: AppIcons.chevronDown,
+        onTap: () => _pickCategory(context, ref),
+      ),
+    ];
+  }
+
+  /// Chips in results mode: each active filter with ✕ to remove it,
+  /// then the sort order.
+  List<Widget> _activeChips(
+    BuildContext context,
+    WidgetRef ref,
+    TransactionFilter filter,
+    Map<int, String> names,
+  ) {
+    final notifier = ref.read(transactionFilterProvider.notifier);
+    final period = filter.period;
+    return [
+      if (filter.type != TypeFilter.all)
+        AppChip(
+          label: filter.type.label,
+          selected: true,
+          trailingIcon: AppIcons.close,
+          semanticLabel: 'Remove filter ${filter.type.label}',
+          onTap: () => notifier.setType(TypeFilter.all),
+        ),
+      for (final id in filter.categoryIds)
+        AppChip(
+          label: names[id] ?? 'Category',
+          selected: true,
+          trailingIcon: AppIcons.close,
+          semanticLabel: 'Remove filter ${names[id] ?? 'category'}',
+          onTap: () =>
+              notifier.setCategories({...filter.categoryIds}..remove(id)),
+        ),
+      if (period != null)
+        AppChip(
+          label: rangeLabel(period),
+          selected: true,
+          leadingIcon: AppIcons.calendar,
+          trailingIcon: AppIcons.close,
+          semanticLabel: 'Remove date filter ${rangeLabel(period)}',
+          onTap: () => notifier.setPeriod(null),
+        )
+      else
+        AppChip(
+          label: 'All time',
+          leadingIcon: AppIcons.calendar,
+          trailingIcon: AppIcons.chevronDown,
+          onTap: () => _pickPeriod(context, ref),
+        ),
+      AppChip(
+        label: filter.sort.shortLabel,
+        leadingIcon: AppIcons.sort,
+        trailingIcon: AppIcons.chevronDown,
+        onTap: () => _pickSort(context, ref),
+      ),
+    ];
+  }
+
   List<Widget> _listSlivers(
     BuildContext context,
+    WidgetRef ref,
     TransactionListView view,
+    TransactionFilter filter,
+    Map<int, String> names,
     DateTime now,
   ) {
     const side = EdgeInsets.symmetric(horizontal: 16);
+    final notifier = ref.read(transactionFilterProvider.notifier);
+    void open(TransactionDetails t) =>
+        context.push(Routes.transactionDetail(t.id));
+    SliverPadding padded(Widget child) => SliverPadding(
+      padding: side,
+      sliver: SliverToBoxAdapter(child: child),
+    );
+
+    // ---- Results mode ----
+    if (filter.hasFilters) {
+      if (view.items.isEmpty) {
+        final q = filter.query.trim();
+        return [
+          padded(
+            EmptyResults(
+              title: q.isEmpty
+                  ? 'No matching transactions'
+                  : 'No matches for “$q”',
+              message: noResultsMessage(filter, names),
+              onClearFilters: notifier.clearFilters,
+              onSearchAllTime: filter.period == null
+                  ? null
+                  : () => notifier.setPeriod(null),
+            ),
+          ),
+        ];
+      }
+      return [
+        padded(ResultsHeader(view: view, query: filter.query)),
+        const SliverToBoxAdapter(child: SizedBox(height: 12)),
+        padded(
+          _TileCard(
+            items: view.items,
+            highlight: filter.query,
+            timeText: (t) => DateText.dayMonthTime(t.occurredAt),
+            onTap: open,
+          ),
+        ),
+        padded(
+          Center(
+            child: TextActionButton(
+              label: 'Clear all filters',
+              onPressed: notifier.reset,
+            ),
+          ),
+        ),
+      ];
+    }
+
+    // ---- Normal mode ----
     final header = SliverPadding(
       padding: side,
       sliver: SliverList.list(
         children: [
           InOutNetCard(view: view),
           const SizedBox(height: 16),
-          Consumer(
-            builder: (context, ref, _) => CountAndSortRow(
-              count: view.items.length,
-              sort: view.sort,
-              onSort: () => _pickSort(context, ref),
-            ),
+          CountAndSortRow(
+            count: view.items.length,
+            sort: view.sort,
+            onSort: () => _pickSort(context, ref),
           ),
           const SizedBox(height: 12),
         ],
@@ -162,31 +283,30 @@ class TransactionsPage extends ConsumerWidget {
     );
 
     if (view.items.isEmpty) {
+      final period = filter.period;
       return [
-        header,
-        const SliverPadding(
-          padding: side,
-          sliver: SliverToBoxAdapter(
-            child: _MessageCard(text: 'No transactions match these filters.'),
+        padded(
+          EmptyResults(
+            title: period == null
+                ? 'No transactions yet'
+                : 'No transactions in ${periodLabel(period)}',
+            message: 'Tap + to add one, or pick another period.',
+            onSearchAllTime: period == null
+                ? null
+                : () => notifier.setPeriod(null),
           ),
         ),
       ];
     }
 
-    void open(TransactionDetails t) =>
-        context.push(Routes.transactionDetail(t.id));
-
     if (!view.sort.groupsByDay) {
       return [
         header,
-        SliverPadding(
-          padding: side,
-          sliver: SliverToBoxAdapter(
-            child: _TileCard(
-              items: view.items,
-              timeText: (t) => DateText.dayMonthTime(t.occurredAt),
-              onTap: open,
-            ),
+        padded(
+          _TileCard(
+            items: view.items,
+            timeText: (t) => DateText.dayMonthTime(t.occurredAt),
+            onTap: open,
           ),
         ),
       ];
@@ -217,21 +337,6 @@ class TransactionsPage extends ConsumerWidget {
         ),
       ),
     ];
-  }
-
-  static String _periodLabel(DateRange? period) {
-    if (period == null) return 'All time';
-    if (period.isWholeMonth) return DateText.month(period.from);
-    return DateText.range(
-      period.from,
-      period.to.subtract(const Duration(days: 1)),
-    );
-  }
-
-  static String _categoryLabel(Set<int> ids, Map<int, String> names) {
-    if (ids.isEmpty) return 'Category';
-    if (ids.length == 1) return names[ids.first] ?? 'Category';
-    return '${ids.length} categories';
   }
 
   Future<void> _pickSort(BuildContext context, WidgetRef ref) async {
@@ -281,9 +386,7 @@ class TransactionsPage extends ConsumerWidget {
     final picked = await showOptionSheet<int>(
       context,
       title: 'Category',
-      selected: filter.categoryIds.length == 1 ? filter.categoryIds.first : -1,
       options: [
-        const SheetOption(value: -1, label: 'All categories'),
         for (final c in categories)
           SheetOption(
             value: c.id,
@@ -294,11 +397,42 @@ class TransactionsPage extends ConsumerWidget {
       ],
     );
     if (picked != null) {
-      ref
-          .read(transactionFilterProvider.notifier)
-          .setCategories(picked == -1 ? {} : {picked});
+      ref.read(transactionFilterProvider.notifier).setCategories({picked});
     }
   }
+}
+
+/// "September", "All time", or "1 – 30 Sep" for other ranges.
+String periodLabel(DateRange? period) {
+  if (period == null) return 'All time';
+  if (period.isWholeMonth) return DateText.month(period.from);
+  return rangeLabel(period);
+}
+
+/// "1 – 30 Sep" (the end of a range is exclusive, so show the day before).
+String rangeLabel(DateRange period) =>
+    DateText.range(period.from, period.to.subtract(const Duration(days: 1)));
+
+/// "Nothing in income for September matches this search. …"
+String noResultsMessage(TransactionFilter filter, Map<int, String> names) {
+  final parts = <String>[
+    switch (filter.type) {
+      TypeFilter.income => 'in income',
+      TypeFilter.expenses => 'in expenses',
+      TypeFilter.all => '',
+    },
+    switch (filter.categoryIds.length) {
+      0 => '',
+      1 => 'in ${names[filter.categoryIds.first] ?? 'this category'}',
+      final n => 'in $n categories',
+    },
+    if (filter.period case final p?) 'for ${periodLabel(p)}',
+  ].where((p) => p.isNotEmpty);
+  final scope = parts.isEmpty ? '' : ' ${parts.join(' ')}';
+  return filter.query.trim().isEmpty
+      ? 'Nothing$scope matches these filters. Try removing a filter.'
+      : 'Nothing$scope matches this search. '
+            'Try another word or remove a filter.';
 }
 
 /// White card with transaction rows and thin lines between them.
@@ -307,11 +441,13 @@ class _TileCard extends StatelessWidget {
     required this.items,
     required this.timeText,
     required this.onTap,
+    this.highlight = '',
   });
 
   final List<TransactionDetails> items;
   final String Function(TransactionDetails) timeText;
   final void Function(TransactionDetails) onTap;
+  final String highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -324,27 +460,10 @@ class _TileCard extends StatelessWidget {
               item: t,
               showDivider: i > 0,
               timeText: timeText(t),
+              highlight: highlight,
               onTap: () => onTap(t),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _MessageCard extends StatelessWidget {
-  const _MessageCard({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(20),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: AppText.label14.copyWith(color: context.colors.textSecondary),
       ),
     );
   }

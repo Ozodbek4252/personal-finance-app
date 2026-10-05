@@ -93,7 +93,21 @@ class _SearchFieldState extends State<SearchField> {
               excludeSemantics: true,
               child: IconButton(
                 onPressed: _clear,
-                icon: AppIcon(AppIcons.close, size: 18, color: c.textTertiary),
+                icon: Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: c.surfaceMuted,
+                    shape: BoxShape.circle,
+                  ),
+                  child: AppIcon(
+                    AppIcons.close,
+                    size: 14,
+                    strokeWidth: 2,
+                    color: c.textSecondary,
+                  ),
+                ),
               ),
             ),
         ],

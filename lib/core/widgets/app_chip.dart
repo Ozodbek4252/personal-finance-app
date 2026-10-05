@@ -19,6 +19,7 @@ class AppChip extends StatelessWidget {
     this.selected = false,
     this.leadingIcon,
     this.trailingIcon,
+    this.semanticLabel,
   });
 
   final String label;
@@ -28,6 +29,9 @@ class AppChip extends StatelessWidget {
 
   /// Often [AppIcons.chevronDown] for chips that open a picker.
   final AppIconData? trailingIcon;
+
+  /// What a screen reader says. Defaults to [label].
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +45,8 @@ class AppChip extends StatelessWidget {
       container: true,
       button: true,
       selected: selected,
+      label: semanticLabel,
+      excludeSemantics: semanticLabel != null,
       child: Material(
         color: selected ? c.primary : c.surface,
         shape: shape,

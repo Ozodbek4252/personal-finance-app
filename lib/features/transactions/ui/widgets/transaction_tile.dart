@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/widgets/amount_text.dart';
 import '../../../../core/widgets/category_icon_tile.dart';
+import '../../../../core/widgets/highlighted_text.dart';
 import '../../../../data/models/display_style.dart';
 import '../../../../data/models/transaction_details.dart';
 import '../../../../data/models/transaction_kind.dart';
@@ -18,6 +19,7 @@ class TransactionTile extends StatelessWidget {
     required this.timeText,
     this.onTap,
     this.showDivider = false,
+    this.highlight = '',
   });
 
   final TransactionDetails item;
@@ -28,6 +30,9 @@ class TransactionTile extends StatelessWidget {
 
   /// Thin line above the row, for every row except the first.
   final bool showDivider;
+
+  /// Search text to highlight in the note.
+  final String highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +74,9 @@ class TransactionTile extends StatelessWidget {
                       style: AppText.body15Strong,
                     ),
                     const SizedBox(height: 2),
-                    Text(
+                    HighlightedText(
                       note == null ? timeText : '$note · $timeText',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      query: note == null ? '' : highlight,
                       style: AppText.caption13Regular.copyWith(
                         color: c.textSecondary,
                       ),

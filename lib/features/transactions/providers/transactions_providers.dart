@@ -22,12 +22,18 @@ class TransactionFilterNotifier extends Notifier<TransactionFilter> {
       state = state.copyWith(period: () => period);
   void setCategories(Set<int> ids) => state = state.copyWith(categoryIds: ids);
 
+  /// Replaces all filters at once, from the filter sheet.
+  void apply(TransactionFilter filter) => state = filter;
+
   /// Back to the defaults: this month, everything, newest first.
   void reset() => state = build();
+
+  /// Clears type, categories and the date range, but keeps the search.
+  void clearFilters() => state = build().copyWith(query: state.query);
 }
 
 /// Far enough back and ahead to mean "all time".
-final _allTime = DateRange(DateTime(1970), DateTime(3000));
+final allTimeRange = DateRange(DateTime(1970), DateTime(3000));
 
 /// Transactions in a date range, newest first.
 final periodTransactionsProvider =
@@ -43,6 +49,6 @@ final transactionListProvider = Provider<AsyncValue<TransactionListView>>((
 ) {
   final filter = ref.watch(transactionFilterProvider);
   return ref
-      .watch(periodTransactionsProvider(filter.period ?? _allTime))
+      .watch(periodTransactionsProvider(filter.period ?? allTimeRange))
       .whenData((items) => TransactionListView.build(items, filter));
 });

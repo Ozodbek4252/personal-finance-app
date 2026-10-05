@@ -7,6 +7,7 @@ abstract final class DateText {
   static final _detail = DateFormat('EEE, d MMM y');
   static final _time = DateFormat('HH:mm');
   static final _dayMonth = DateFormat('d MMM');
+  static final _fullDate = DateFormat('dd MMM y');
   static final _weekday = DateFormat('EEEE');
   static final _monthShort = DateFormat('MMM');
   static final _monthLong = DateFormat('MMMM');
@@ -22,6 +23,9 @@ abstract final class DateText {
 
   /// "Aug".
   static String monthShort(DateTime d) => _monthShort.format(d);
+
+  /// "01 Sep 2026" (date fields in the filter sheet).
+  static String fullDate(DateTime d) => _fullDate.format(d);
 
   /// "13:40".
   static String time(DateTime d) => _time.format(d);
