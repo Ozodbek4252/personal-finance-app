@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/data/db/app_database.dart';
@@ -17,12 +18,17 @@ Future<void> _openEdit(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Future<TransactionRow> _korzinka(WidgetTester tester, AppDatabase db) async =>
-    (await tester.runAsync(
-      () => (db.select(
-        db.transactions,
-      )..where((t) => t.note.equals('Korzinka'))).getSingle(),
-    ))!;
+Future<TransactionRow> _korzinka(
+  WidgetTester tester,
+  AppDatabase db,
+) async => (await tester.runAsync(
+  () =>
+      (db.select(
+            db.transactions,
+            // Other sample rows are also called "Korzinka", so match the amount.
+          )..where((t) => t.note.equals('Korzinka') & t.amount.equals(420000)))
+          .getSingle(),
+))!;
 
 /// Taps a widget that may be below the fold of the form.
 Future<void> _tapInForm(WidgetTester tester, Finder finder) async {

@@ -77,13 +77,16 @@ class AddTransactionController extends Notifier<AddTransactionState> {
   /// True after the transaction was saved with its receipt.
   bool _receiptSaved = false;
 
+  /// Copy of `state.receipt`, because `state` cannot be read in onDispose.
+  String? _attachedReceipt;
+
   @override
   AddTransactionState build() {
     // A photo attached but never saved is not needed. The store is read
     // here because `ref` cannot be used while the provider is disposed.
     final store = ref.read(receiptStoreProvider);
     ref.onDispose(() {
-      final receipt = state.receipt;
+      final receipt = _attachedReceipt;
       if (receipt != null && !_receiptSaved) store.delete(receipt);
     });
     return AddTransactionState(
@@ -115,6 +118,7 @@ class AddTransactionController extends Notifier<AddTransactionState> {
       ref.read(receiptStoreProvider).delete(old);
     }
     state = state.copyWith(receipt: () => name);
+    _attachedReceipt = name;
   }
 
   void setNote(String? note) => state = state.copyWith(
