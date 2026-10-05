@@ -7,6 +7,7 @@ import '../../../core/format/money_format.dart';
 import '../../../core/icons/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/time/clock.dart';
 import '../../../core/widgets/amount_text.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_icon.dart';
@@ -421,7 +422,9 @@ class _CategoryInsight extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final month = ref.watch(monthTransactionsProvider(item.occurredAt)).value;
+    final month = ref
+        .watch(monthTransactionsProvider(monthStart(item.occurredAt)))
+        .value;
     if (month == null) return const SizedBox.shrink();
 
     final sameKind = month.where((t) => t.kind == item.kind);

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'dev/design_preview_page.dart';
 import 'data/models/transaction_kind.dart';
 import 'features/add_transaction/ui/add_transaction_page.dart';
+import 'features/categories/ui/categories_page.dart';
+import 'features/categories/ui/category_form_page.dart';
 import 'features/dashboard/ui/dashboard_page.dart';
 import 'features/edit_transaction/ui/edit_transaction_page.dart';
 import 'features/monthly_overview/ui/monthly_overview_page.dart';
@@ -13,7 +15,6 @@ import 'features/statistics/ui/statistics_page.dart';
 import 'features/transaction_detail/ui/transaction_detail_page.dart';
 import 'features/transactions/ui/transactions_page.dart';
 import 'shell/app_shell.dart';
-import 'shell/placeholder_body.dart';
 
 /// All route paths in one place.
 abstract final class Routes {
@@ -30,6 +31,8 @@ abstract final class Routes {
 
   static const monthlyOverview = '/monthly';
   static const categories = '/categories';
+  static const newCategory = '/categories/new';
+  static String editCategory(int id) => '/categories/$id/edit';
   static String transactionDetail(int id) => '/transaction/$id';
   static String editTransaction(int id) => '/transaction/$id/edit';
 
@@ -89,10 +92,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.categories,
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const PlaceholderPage(
-          title: 'Categories',
-          message: 'Managing categories is built in Task 13.',
-        ),
+        builder: (context, state) => const CategoriesPage(),
+        routes: [
+          GoRoute(
+            path: 'new',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => CategoryFormPage(
+              initialKind: state.uri.queryParameters['kind'] == 'income'
+                  ? TransactionKind.income
+                  : TransactionKind.expense,
+            ),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => CategoryFormPage(
+              categoryId: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: Routes.designPreview,

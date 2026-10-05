@@ -26,6 +26,11 @@ class CategoryRepository {
     return query.watch();
   }
 
+  /// One category (archived ones too), or null if it does not exist.
+  Future<CategoryRow?> getById(int id) => (_db.select(
+    _db.categories,
+  )..where((c) => c.id.equals(id))).getSingleOrNull();
+
   /// Adds a category at the end of its list. Returns the new id.
   Future<int> add({
     required String name,

@@ -70,6 +70,9 @@ final paymentMethodsProvider = StreamProvider<List<PaymentMethodRow>>(
 );
 
 /// Transactions in the month that contains the given date, newest first.
+///
+/// Pass a stable date (like the month start), not the current time:
+/// each different date is a separate provider.
 final monthTransactionsProvider =
     StreamProvider.family<List<TransactionDetails>, DateTime>((ref, month) {
       final start = monthStart(month);

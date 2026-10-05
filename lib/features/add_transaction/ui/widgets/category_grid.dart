@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/category_icon_tile.dart';
+import '../../../../core/widgets/dashed_border.dart';
 import '../../../../data/db/app_database.dart';
 import '../../../../data/models/display_style.dart';
 
@@ -309,8 +310,9 @@ class _MoreTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        child: CustomPaint(
-          painter: _DashedBorderPainter(color: c.divider),
+        child: DashedBorder(
+          color: c.divider,
+          radius: 14,
           child: SizedBox(
             height: wide ? 56 : 74,
             child: wide
@@ -345,32 +347,4 @@ class _MoreTile extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 1 px dashed rounded border, like CSS `border: 1px dashed`.
-class _DashedBorderPainter extends CustomPainter {
-  _DashedBorderPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      (Offset.zero & size).deflate(0.5),
-      const Radius.circular(14),
-    );
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final path = Path()..addRRect(rrect);
-    for (final metric in path.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += 7) {
-        canvas.drawPath(metric.extractPath(d, d + 4), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter old) => old.color != color;
 }
