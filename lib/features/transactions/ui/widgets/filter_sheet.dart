@@ -6,11 +6,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/time/clock.dart';
 import '../../../../core/widgets/app_chip.dart';
-import '../../../../core/widgets/app_icon.dart';
+import '../../../../core/widgets/category_chip.dart';
 import '../../../../core/widgets/buttons.dart';
 import '../../../../core/widgets/segmented_tabs.dart';
 import '../../../../data/db/app_database.dart';
-import '../../../../data/models/display_style.dart';
 import '../../../../data/models/transaction_kind.dart';
 import '../../../../data/providers/data_providers.dart';
 import '../../domain/transaction_filter.dart';
@@ -189,7 +188,7 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                       runSpacing: 8,
                       children: [
                         for (final cat in categories)
-                          _CategoryPill(
+                          CategoryChip(
                             category: cat,
                             selected: _draft.categoryIds.contains(cat.id),
                             onTap: () {
@@ -295,72 +294,6 @@ class _Label extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: AppText.overline13.copyWith(color: context.colors.textSecondary),
-      ),
-    );
-  }
-}
-
-/// Rounded category button with a small round icon.
-class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final CategoryRow category;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final brightness = Theme.of(context).brightness;
-    final tint = category.color.resolve(brightness);
-    final soft = tint.withValues(alpha: CategoryColor.tileAlpha(brightness));
-    final shape = StadiumBorder(
-      side: selected
-          ? BorderSide(color: tint, width: 2)
-          : BorderSide(color: c.divider),
-    );
-    return Semantics(
-      container: true,
-      button: true,
-      selected: selected,
-      label: category.name,
-      excludeSemantics: true,
-      child: Material(
-        color: selected ? soft : c.surface,
-        shape: shape,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: shape,
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.only(left: 6, right: 12),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: soft,
-                    shape: BoxShape.circle,
-                  ),
-                  child: AppIcon(category.icon, size: 15, color: tint),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  category.name,
-                  style: selected ? AppText.label14Strong : AppText.label14,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
