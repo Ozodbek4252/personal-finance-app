@@ -21,6 +21,19 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onHome = navigationShell.currentIndex == 0;
+    // Android Back on another tab goes to Home first; on Home it leaves
+    // the app, like most Android apps.
+    return PopScope(
+      canPop: onHome,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) navigationShell.goBranch(0);
+      },
+      child: _scaffold(context),
+    );
+  }
+
+  Widget _scaffold(BuildContext context) {
     return Scaffold(
       // Pages draw behind the see-through top part of the nav bar.
       // Scaffold adds the nav bar height to the bottom padding,

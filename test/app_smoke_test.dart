@@ -92,4 +92,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SettingsPage), findsOneWidget);
   });
+
+  testApp('Back on another tab goes to Home first', (tester, db) async {
+    await tester.tap(_tab('Statistics'));
+    await tester.pumpAndSettle();
+    expect(find.byType(StatisticsPage), findsOneWidget);
+
+    // Same as the Android system Back button.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(DashboardPage), findsOneWidget);
+  });
 }
