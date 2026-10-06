@@ -31,6 +31,8 @@ void main() {
     ('Settings', null),
     ('Add expense', Routes.addExpense),
     ('Add income', Routes.addIncome),
+    ('Exchange', Routes.buyDollars),
+    ('Sell dollars', Routes.sellDollars),
     ('Transaction details', Routes.transactionDetail(1)),
     ('Edit transaction', Routes.editTransaction(1)),
     ('Monthly overview', Routes.monthlyOverview),

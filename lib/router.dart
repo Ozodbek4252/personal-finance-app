@@ -30,6 +30,8 @@ abstract final class Routes {
   static const add = '/add';
   static const addExpense = '/add?type=expense';
   static const addIncome = '/add?type=income';
+  static const buyDollars = '/add?type=exchange';
+  static const sellDollars = '/add?type=exchange&sell=true';
 
   static const monthlyOverview = '/monthly';
   static const categories = '/categories';
@@ -69,6 +71,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             initialKind: state.uri.queryParameters['type'] == 'income'
                 ? TransactionKind.income
                 : TransactionKind.expense,
+            startWithExchange: state.uri.queryParameters['type'] == 'exchange',
+            sellDollars: state.uri.queryParameters['sell'] == 'true',
           ),
         ),
       ),

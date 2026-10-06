@@ -72,11 +72,29 @@ abstract final class MoneyFormat {
   /// the decimal mark is a comma: "11.778,45".
   static String rate(double value) {
     final cents = (value * 100).round();
-    final whole = amount(cents ~/ 100);
-    final rest = cents % 100;
-    if (rest == 0) return whole;
+    if (cents % 100 == 0) return amount(cents ~/ 100);
+    return _withCents(cents);
+  }
+
+  /// Cents as dollars: 10000 → "$100.00", 148419 → "$1 484.19",
+  /// −4000 → "−$40.00". With [round] there are no cents: "$1 484".
+  static String dollars(int cents, {bool round = false}) {
+    final sign = cents < 0 ? minus : '';
+    final abs = cents.abs();
+    final body = round ? amount((abs / 100).round()) : _withCents(abs);
+    return '$sign\$$body';
+  }
+
+  /// Like [dollars], but without ".00" when there are no cents:
+  /// 10000 → "$100", 10050 → "$100.50".
+  static String dollarsShort(int cents) =>
+      dollars(cents, round: cents % 100 == 0);
+
+  /// 1265037 → "12 650.37" (or "12.650,37" with the dot style).
+  static String _withCents(int value) {
     final mark = style == NumberStyle.dot ? ',' : '.';
-    return '$whole$mark${rest.toString().padLeft(2, '0')}';
+    final rest = (value.abs() % 100).toString().padLeft(2, '0');
+    return '${amount(value ~/ 100)}$mark$rest';
   }
 
   /// Turns raw keypad input ("35000") into an int. Empty input is 0.

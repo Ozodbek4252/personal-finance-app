@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/date_format.dart';
 import '../../../core/format/money_format.dart';
+import '../../../core/format/rate_input.dart';
 import '../../../core/icons/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -72,15 +73,15 @@ class _CurrenciesPageState extends ConsumerState<CurrenciesPage> {
     final text = await showTextInputDialog(
       context,
       title: 'Your rate',
-      initial: current == null ? '' : _plainRate(current),
+      initial: current == null ? '' : RateInput.plain(current),
       hint: '12650',
       suffix: 'UZS for 1 USD',
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
       validate: (t) =>
-          _parseRate(t) == null ? 'Type a number, like 12650' : null,
+          RateInput.parse(t) == null ? 'Type a number, like 12650' : null,
     );
-    final rate = text == null ? null : _parseRate(text);
+    final rate = text == null ? null : RateInput.parse(text);
     if (rate == null) return false;
     await ref.read(settingsRepositoryProvider).setUsdManualRate(rate);
     return true;
@@ -226,23 +227,6 @@ class _CurrenciesPageState extends ConsumerState<CurrenciesPage> {
     );
   }
 }
-
-/// "12 650.5" or "12,650.5" → 12650.5. Null when it is not a rate.
-double? _parseRate(String text) {
-  var t = text.trim().replaceAll(' ', '');
-  // A single comma is a decimal mark ("12650,37").
-  if (!t.contains('.') && ','.allMatches(t).length == 1) {
-    t = t.replaceAll(',', '.');
-  } else {
-    t = t.replaceAll(',', '');
-  }
-  final rate = double.tryParse(t);
-  return rate != null && rate > 0 && rate.isFinite ? rate : null;
-}
-
-/// 12650.0 → "12650", 11778.45 → "11778.45". For the edit field.
-String _plainRate(double rate) =>
-    rate == rate.roundToDouble() ? '${rate.round()}' : rate.toStringAsFixed(2);
 
 class _RateText extends ConsumerWidget {
   const _RateText({required this.rate, required this.manual});

@@ -18,6 +18,7 @@ import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
 import '../../../router.dart';
+import '../../exchange/ui/exchange_form.dart';
 import '../../receipts/receipt_widgets.dart';
 import '../providers/add_transaction_controller.dart';
 import 'widgets/amount_display.dart';
@@ -25,19 +26,40 @@ import 'widgets/category_grid.dart';
 import 'widgets/note_sheet.dart';
 import 'widgets/number_keypad.dart';
 
-/// Full-screen "Add expense" / "Add income" page.
-class AddTransactionPage extends ConsumerWidget {
-  const AddTransactionPage({super.key, required this.initialKind});
+/// Tabs at the top of the add screen.
+enum AddTab { expense, income, exchange }
+
+/// Full-screen "Add expense" / "Add income" / "Exchange" page.
+class AddTransactionPage extends ConsumerStatefulWidget {
+  const AddTransactionPage({
+    super.key,
+    required this.initialKind,
+    this.startWithExchange = false,
+    this.sellDollars = false,
+  });
 
   final TransactionKind initialKind;
 
+  /// Open on the Exchange tab.
+  final bool startWithExchange;
+
+  /// With [startWithExchange]: sell dollars instead of buying them.
+  final bool sellDollars;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AddTransactionPage> createState() => _AddTransactionPageState();
+}
+
+class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
+  late bool _exchange = widget.startWithExchange;
+
+  TransactionKind get initialKind => widget.initialKind;
+
+  @override
+  Widget build(BuildContext context) {
     final provider = addTransactionProvider(initialKind);
     final state = ref.watch(provider);
     final controller = ref.read(provider.notifier);
-    final c = context.colors;
-    final isIncome = state.kind == TransactionKind.income;
     final categories =
         ref.watch(categoriesProvider(state.kind)).value ?? const [];
     final methods = ref.watch(paymentMethodsProvider).value ?? const [];
@@ -59,71 +81,38 @@ class AddTransactionPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _Header(
-                      kind: state.kind,
-                      onKind: controller.setKind,
+                      tab: _exchange
+                          ? AddTab.exchange
+                          : state.kind == TransactionKind.income
+                          ? AddTab.income
+                          : AddTab.expense,
+                      onTab: (tab) {
+                        setState(() => _exchange = tab == AddTab.exchange);
+                        if (tab != AddTab.exchange) {
+                          controller.setKind(
+                            tab == AddTab.income
+                                ? TransactionKind.income
+                                : TransactionKind.expense,
+                          );
+                        }
+                      },
                       onClose: () => context.pop(),
                     ),
-                    const SizedBox(height: 4),
-                    AmountDisplay(
-                      amount: state.amount,
-                      kind: state.kind,
-                      onCurrencyTap: () => _showMessage(
+                    if (_exchange) ...[
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ExchangeForm(startSelling: widget.sellDollars),
+                      ),
+                    ] else
+                      ..._transactionBody(
                         context,
-                        'Only UZS is supported for now.',
+                        state,
+                        controller,
+                        method,
+                        methods,
+                        categories,
+                        now,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    _QuickChips(
-                      dayLabel: DateText.shortDay(state.day, now: now),
-                      method: method,
-                      note: state.note,
-                      showReceipt: !isIncome,
-                      hasReceipt: state.receipt != null,
-                      onDay: () => _pickDay(context, ref, state.day, now),
-                      onMethod: () => _pickMethod(context, ref, methods),
-                      onNote: () async {
-                        final note = await showNoteSheet(
-                          context,
-                          initial: state.note,
-                        );
-                        if (note != null) controller.setNote(note);
-                      },
-                      onReceipt: () => _receipt(context, ref, state.receipt),
-                    ),
-                    const SizedBox(height: 12),
-                    _GroupHeader(
-                      title: isIncome ? 'Source' : 'Category',
-                      onEdit: () => context.push(Routes.categories),
-                    ),
-                    const SizedBox(height: 8),
-                    if (isIncome)
-                      IncomeCategoryGrid(
-                        categories: categories,
-                        selectedId: state.categoryId,
-                        onSelect: controller.selectCategory,
-                        onMore: () => _pickCategory(context, ref, categories),
-                      )
-                    else
-                      ExpenseCategoryGrid(
-                        categories: categories,
-                        selectedId: state.categoryId,
-                        onSelect: controller.selectCategory,
-                        onMore: () => _pickCategory(context, ref, categories),
-                      ),
-                    const Spacer(),
-                    const SizedBox(height: 12),
-                    NumberKeypad(
-                      onKey: controller.press,
-                      onClear: controller.clearAmount,
-                    ),
-                    const SizedBox(height: 12),
-                    PrimaryButton(
-                      label: _saveLabel(state),
-                      background: isIncome ? c.income : null,
-                      onPressed: state.canSave
-                          ? () => _save(context, ref)
-                          : null,
-                    ),
                   ],
                 ),
               ),
@@ -132,6 +121,72 @@ class AddTransactionPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  List<Widget> _transactionBody(
+    BuildContext context,
+    AddTransactionState state,
+    AddTransactionController controller,
+    PaymentMethodRow? method,
+    List<PaymentMethodRow> methods,
+    List<CategoryRow> categories,
+    DateTime now,
+  ) {
+    final c = context.colors;
+    final isIncome = state.kind == TransactionKind.income;
+    return [
+      const SizedBox(height: 4),
+      AmountDisplay(
+        amount: state.amount,
+        kind: state.kind,
+        onCurrencyTap: () =>
+            _showMessage(context, 'Only UZS is supported for now.'),
+      ),
+      const SizedBox(height: 12),
+      _QuickChips(
+        dayLabel: DateText.shortDay(state.day, now: now),
+        method: method,
+        note: state.note,
+        showReceipt: !isIncome,
+        hasReceipt: state.receipt != null,
+        onDay: () => _pickDay(context, ref, state.day, now),
+        onMethod: () => _pickMethod(context, ref, methods),
+        onNote: () async {
+          final note = await showNoteSheet(context, initial: state.note);
+          if (note != null) controller.setNote(note);
+        },
+        onReceipt: () => _receipt(context, ref, state.receipt),
+      ),
+      const SizedBox(height: 12),
+      _GroupHeader(
+        title: isIncome ? 'Source' : 'Category',
+        onEdit: () => context.push(Routes.categories),
+      ),
+      const SizedBox(height: 8),
+      if (isIncome)
+        IncomeCategoryGrid(
+          categories: categories,
+          selectedId: state.categoryId,
+          onSelect: controller.selectCategory,
+          onMore: () => _pickCategory(context, ref, categories),
+        )
+      else
+        ExpenseCategoryGrid(
+          categories: categories,
+          selectedId: state.categoryId,
+          onSelect: controller.selectCategory,
+          onMore: () => _pickCategory(context, ref, categories),
+        ),
+      const Spacer(),
+      const SizedBox(height: 12),
+      NumberKeypad(onKey: controller.press, onClear: controller.clearAmount),
+      const SizedBox(height: 12),
+      PrimaryButton(
+        label: _saveLabel(state),
+        background: isIncome ? c.income : null,
+        onPressed: state.canSave ? () => _save(context, ref) : null,
+      ),
+    ];
   }
 
   static String _saveLabel(AddTransactionState s) {
@@ -280,13 +335,13 @@ class AddTransactionPage extends ConsumerWidget {
 
 class _Header extends StatelessWidget {
   const _Header({
-    required this.kind,
-    required this.onKind,
+    required this.tab,
+    required this.onTab,
     required this.onClose,
   });
 
-  final TransactionKind kind;
-  final ValueChanged<TransactionKind> onKind;
+  final AddTab tab;
+  final ValueChanged<AddTab> onTab;
   final VoidCallback onClose;
 
   @override
@@ -304,23 +359,21 @@ class _Header extends StatelessWidget {
           child: SegmentedTabs(
             options: [
               SegmentOption(
-                TransactionKind.expense,
+                AddTab.expense,
                 'Expense',
                 selectedColor: c.expense,
               ),
+              SegmentOption(AddTab.income, 'Income', selectedColor: c.income),
               SegmentOption(
-                TransactionKind.income,
-                'Income',
-                selectedColor: c.income,
+                AddTab.exchange,
+                'Exchange',
+                selectedColor: c.accent,
               ),
             ],
-            selected: kind,
-            onChanged: onKind,
+            selected: tab,
+            onChanged: onTab,
           ),
         ),
-        const SizedBox(width: 12),
-        // Same width as the close button, so the tabs stay centered.
-        const SizedBox(width: 44),
       ],
     );
   }

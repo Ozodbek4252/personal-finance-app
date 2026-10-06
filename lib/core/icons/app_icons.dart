@@ -152,6 +152,9 @@ abstract final class AppIcons {
   static const inbox = AppIconData(
     '<path d="M3.5 13.5l2.5-8h12l2.5 8V19a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 13.5h5l1 2h5l1-2h5"/>',
   );
+
+  /// Two opposite arrows (⇄): exchanges between so'm and dollars.
+  static const exchange = AppIconData('<path d="M4 8h15l-4-4M20 16H5l4 4"/>');
   static const sort = AppIconData(
     '<path d="M7 4v16M3.5 16.5L7 20l3.5-3.5M17 20V4M13.5 7.5L17 4l3.5 3.5"/>',
   );
@@ -209,6 +212,7 @@ abstract final class AppIcons {
   /// Every icon by name. Used by the design preview page.
   static const all = <String, AppIconData>{
     'close': close,
+    'exchange': exchange,
     'chevronDown': chevronDown,
     'calendar': calendar,
     'card': card,
