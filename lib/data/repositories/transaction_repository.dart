@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../core/time/clock.dart';
 import '../db/app_database.dart';
+import '../models/currency.dart';
 import '../models/month_totals.dart';
 import '../models/transaction_details.dart';
 import '../models/transaction_kind.dart';
@@ -79,24 +80,34 @@ class TransactionRepository {
     });
   }
 
-  /// Current balance of every payment method, by method id:
-  /// opening balance + all income − all expenses.
-  Stream<Map<int, int>> watchBalances() {
-    final query = _db.customSelect(
-      'SELECT pm.id AS id, pm.opening_balance + COALESCE(SUM('
-      "CASE WHEN t.kind = 'income' THEN t.amount ELSE -t.amount END"
-      '), 0) AS balance '
-      'FROM payment_methods pm '
-      'LEFT JOIN transactions t ON t.payment_method_id = pm.id '
-      'GROUP BY pm.id',
-      readsFrom: {_db.paymentMethods, _db.transactions},
-    );
-    return query.watch().map(
-      (rows) => {
-        for (final row in rows) row.read<int>('id'): row.read<int>('balance'),
-      },
-    );
-  }
+  /// Current balance of every payment method in [currency], by method
+  /// id: opening balance + income − expenses, minus money exchanged out
+  /// (with its fee), plus money exchanged in. Values are in the smallest
+  /// unit of [currency] (so'm or cents).
+  Stream<Map<int, int>> watchBalances({Currency currency = Currency.uzs}) =>
+      _balances(currency).watch().map(_toBalanceMap);
+
+  /// Like [watchBalances], but reads once.
+  Future<Map<int, int>> getBalances({Currency currency = Currency.uzs}) =>
+      _balances(currency).get().then(_toBalanceMap);
+
+  Selectable<QueryRow> _balances(Currency currency) => _db.customSelect(
+    'SELECT pm.id AS id, pm.opening_balance'
+    ' + COALESCE((SELECT SUM('
+    "CASE WHEN t.kind = 'income' THEN t.amount ELSE -t.amount END) "
+    'FROM transactions t WHERE t.payment_method_id = pm.id), 0)'
+    ' - COALESCE((SELECT SUM(e.from_amount + e.fee) '
+    'FROM exchanges e WHERE e.from_method_id = pm.id), 0)'
+    ' + COALESCE((SELECT SUM(e.to_amount) '
+    'FROM exchanges e WHERE e.to_method_id = pm.id), 0) AS balance '
+    'FROM payment_methods pm WHERE pm.currency = ?',
+    variables: [Variable.withString(currency.name)],
+    readsFrom: {_db.paymentMethods, _db.transactions, _db.exchanges},
+  );
+
+  static Map<int, int> _toBalanceMap(List<QueryRow> rows) => {
+    for (final row in rows) row.read<int>('id'): row.read<int>('balance'),
+  };
 
   /// Number of all transactions.
   Stream<int> watchCount() => _db.transactions.count().watchSingle();

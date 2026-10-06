@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/async/combine.dart';
 import '../../../core/time/clock.dart';
+import '../../../data/models/currency.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/providers/data_providers.dart';
 import '../domain/dashboard_data.dart';
@@ -64,7 +65,7 @@ class BalanceSummary {
 }
 
 final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
-  final balances = ref.watch(balancesProvider);
+  final balances = ref.watch(balancesProvider(Currency.uzs));
   final methods = ref.watch(paymentMethodsProvider);
   final hidden = ref.watch(currentSettingsProvider).balanceHidden;
 
@@ -75,7 +76,7 @@ final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
         if ((byId[m.id] ?? 0) != 0) (method: m, balance: byId[m.id]!),
     ]..sort((a, b) => b.balance.compareTo(a.balance));
     return BalanceSummary(
-      // Archived methods still hold money, so sum all balances.
+      // Archived so'm methods still hold money, so sum all of them.
       total: byId.values.fold(0, (a, b) => a + b),
       methods: withMoney,
       hidden: hidden,

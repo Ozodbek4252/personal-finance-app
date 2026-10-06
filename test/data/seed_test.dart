@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personal_finance/data/models/currency.dart';
 import 'package:personal_finance/core/time/clock.dart';
 import 'package:personal_finance/data/db/app_database.dart';
 import 'package:personal_finance/data/db/seed.dart';
@@ -41,8 +42,12 @@ void main() {
       ]);
 
       final methods = await db.select(db.paymentMethods).get();
-      expect(methods, hasLength(8));
+      expect(methods, hasLength(9));
       expect(methods.where((m) => m.isCustom).single.name, 'Click wallet');
+      expect(
+        methods.where((m) => m.currency == Currency.usd).single.name,
+        'Cash (USD)',
+      );
 
       final settings = await SettingsRepository(db).load();
       final humo = methods.firstWhere((m) => m.name == 'Humo');
@@ -149,6 +154,18 @@ void main() {
     test('no payment method has a negative balance', () async {
       final balances = await repo.watchBalances().first;
       expect(balances.values.every((b) => b >= 0), isTrue);
+    });
+
+    test('has \$500 in two dollar methods, bought for 6 271 000', () async {
+      final usd = await repo.watchBalances(currency: Currency.usd).first;
+      expect(usd.values.fold(0, (a, b) => a + b), 50000);
+      expect(usd.values.toSet(), {30000, 20000});
+      final exchanges = await db.select(db.exchanges).get();
+      expect(
+        exchanges.map((e) => e.fromAmount).fold(0, (a, b) => a + b),
+        6271000,
+      );
+      expect(await db.select(db.exchangeRates).get(), hasLength(6));
     });
 
     test('is added only once', () async {

@@ -14,6 +14,7 @@ import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/option_sheet.dart';
 import '../../../core/widgets/text_input_dialog.dart';
+import '../../../data/models/currency.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/display_style.dart';
 import '../../../data/providers/data_providers.dart';
@@ -85,7 +86,7 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
   }
 
   Future<void> _openMethod(PaymentMethodRow m, bool isDefault) async {
-    final balance = ref.read(balancesProvider).value?[m.id] ?? 0;
+    final balance = ref.read(balancesProvider(Currency.uzs)).value?[m.id] ?? 0;
     final canRemove = !isDefault && _methods.length > 1;
     final action = await showOptionSheet<String>(
       context,

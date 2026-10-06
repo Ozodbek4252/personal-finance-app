@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/core/format/money_format.dart';
@@ -5,6 +7,8 @@ import 'package:personal_finance/core/time/clock.dart';
 import 'package:personal_finance/data/backup/backup_service.dart';
 import 'package:personal_finance/data/db/app_database.dart';
 import 'package:personal_finance/data/db/seed.dart';
+import 'package:personal_finance/data/models/currency.dart';
+import 'package:personal_finance/data/repositories/exchange_repository.dart';
 import 'package:personal_finance/data/repositories/settings_repository.dart';
 import 'package:personal_finance/data/repositories/transaction_repository.dart';
 import 'package:personal_finance/features/settings/domain/csv_export.dart';
@@ -68,8 +72,35 @@ void main() {
       expect(lines, hasLength(items.length + 1));
       expect(
         lines[1],
-        '2026-09-30 13:40,Expense,Groceries,-420000,Uzcard,Korzinka,'
+        '2026-09-30 13:40,Expense,Groceries,-420000,,Uzcard,Korzinka,'
         '"Weekly groceries, cleaning supplies and bread"',
+      );
+    });
+
+    test('CSV puts exchanges between transactions by date', () async {
+      final items = await repo
+          .watchBetween(DateTime(2026, 9, 30), DateTime(2026, 10))
+          .first;
+      final exchanges = await ExchangeRepository(
+        db,
+        const SystemClock(),
+      ).getAll();
+      final lines = buildTransactionsCsv(
+        items,
+        exchanges: exchanges,
+      ).trim().split('\r\n');
+      expect(lines, hasLength(items.length + exchanges.length + 1));
+      expect(
+        lines,
+        contains(
+          '2026-09-30 11:30,Exchange,,-1265000,100.00,'
+          'Humo → Cash (USD),,Rate 12650.0',
+        ),
+      );
+      // Newest first: the 13:40 groceries come before the 11:30 exchange.
+      expect(
+        lines.indexWhere((l) => l.startsWith('2026-09-30 13:40')),
+        lessThan(lines.indexWhere((l) => l.contains('Exchange'))),
       );
     });
 
@@ -77,7 +108,11 @@ void main() {
       final service = BackupService(db);
       final text = await service.create();
       final before = await db.transactions.count().getSingle();
+      final exchangesBefore = await db.select(db.exchanges).get();
+      final methodsBefore = await db.select(db.paymentMethods).get();
+      expect(exchangesBefore, isNotEmpty);
 
+      await db.delete(db.exchanges).go();
       await db.delete(db.transactions).go();
       await (db.update(db.categories)..where((c) => c.name.equals('Food')))
           .write(const CategoriesCompanion(name: Value('Meals')));
@@ -89,6 +124,43 @@ void main() {
       )..where((c) => c.name.equals('Food'))).getSingleOrNull();
       expect(food, isNotNull);
       expect((await SettingsRepository(db).load()).sampleDataSeeded, isTrue);
+      expect(await db.select(db.exchanges).get(), exchangesBefore);
+      expect(await db.select(db.paymentMethods).get(), methodsBefore);
+      expect(await db.select(db.exchangeRates).get(), hasLength(6));
+    });
+
+    test('old version 1 backups still restore', () async {
+      final service = BackupService(db);
+      final data = jsonDecode(await service.create()) as Map<String, dynamic>;
+      // Make it look like a backup from the first app version.
+      data['version'] = 1;
+      data.remove('exchanges');
+      data.remove('exchangeRates');
+      final methods = [
+        for (final m in data['paymentMethods'] as List)
+          if ((m as Map<String, dynamic>)['currency'] == 'uzs')
+            {...m}..remove('currency'),
+      ];
+      data['paymentMethods'] = methods;
+
+      await service.restore(jsonEncode(data));
+      final restored = await db.select(db.paymentMethods).get();
+      expect(restored, hasLength(methods.length));
+      expect(restored.every((m) => m.currency == Currency.uzs), isTrue);
+      expect(await db.select(db.exchanges).get(), isEmpty);
+    });
+
+    test('backups from a newer app version are refused', () async {
+      await expectLater(
+        BackupService(db).restore('{"app": "personal_finance", "version": 99}'),
+        throwsA(
+          isA<BackupFormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('newer'),
+          ),
+        ),
+      );
     });
 
     test('bad files are refused and change nothing', () async {

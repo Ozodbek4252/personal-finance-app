@@ -3,9 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personal_finance/core/time/clock.dart';
 import 'package:personal_finance/data/db/app_database.dart';
 import 'package:personal_finance/data/db/seed.dart';
+import 'package:personal_finance/data/models/currency.dart';
+import 'package:personal_finance/data/models/exchange_details.dart';
 import 'package:personal_finance/data/models/transaction_details.dart';
 import 'package:personal_finance/data/models/transaction_kind.dart';
 import 'package:personal_finance/data/repositories/category_repository.dart';
+import 'package:personal_finance/data/repositories/exchange_rate_repository.dart';
+import 'package:personal_finance/data/repositories/exchange_repository.dart';
 import 'package:personal_finance/data/repositories/payment_method_repository.dart';
 import 'package:personal_finance/data/repositories/settings_repository.dart';
 import 'package:personal_finance/data/repositories/transaction_repository.dart';
@@ -193,6 +197,127 @@ void main() {
     final list = await methods.watchAll().first;
     expect(list.last.id, id);
     expect(list.last.isCustom, isTrue);
+  });
+
+  test('PaymentMethodRepository filters by currency', () async {
+    final som = await methods.watchAll(currency: Currency.uzs).first;
+    final usd = await methods.watchAll(currency: Currency.usd).first;
+    expect(som.map((m) => m.name), isNot(contains('Cash (USD)')));
+    expect(usd.map((m) => m.name), ['Cash (USD)']);
+    expect((await methods.watchAll().first).length, som.length + 1);
+
+    final card = await methods.addCustom('Visa USD', currency: Currency.usd);
+    final after = await methods.watchAll(currency: Currency.usd).first;
+    expect(after.last.id, card);
+  });
+
+  group('ExchangeRepository', () {
+    late ExchangeRepository exchanges;
+    late int cashUsd;
+
+    setUp(() async {
+      exchanges = ExchangeRepository(db, clock);
+      cashUsd =
+          (await methods.watchAll(currency: Currency.usd).first).single.id;
+    });
+
+    ExchangeDraft buy(int dollars, double rate, {int fee = 0}) => ExchangeDraft(
+      fromMethodId: humo,
+      fromAmount: (dollars * rate).round(),
+      toMethodId: cashUsd,
+      toAmount: dollars * 100,
+      rate: rate,
+      fee: fee,
+      occurredAt: DateTime(2026, 9, 30, 11, 30),
+    );
+
+    test('add, read, update and delete', () async {
+      final id = await exchanges.add(buy(100, 12650));
+      var list = await exchanges.watchAll().first;
+      expect(list.single.id, id);
+      expect(list.single.from.name, 'Humo');
+      expect(list.single.to.name, 'Cash (USD)');
+      expect(list.single.fromCurrency, Currency.uzs);
+      expect(list.single.toCurrency, Currency.usd);
+      expect(list.single.exchange.fromAmount, 1265000);
+      expect(list.single.exchange.createdAt, clock.value);
+
+      await exchanges.update(id, buy(200, 12560));
+      list = await exchanges.getAll();
+      expect(list.single.exchange.toAmount, 20000);
+      expect(list.single.exchange.rate, 12560);
+
+      final row = list.single.exchange;
+      await exchanges.delete(id);
+      expect(await exchanges.watchById(id).first, isNull);
+      await exchanges.restore(row);
+      expect((await exchanges.watchById(id).first)?.exchange, row);
+    });
+
+    test('moves money between so\'m and dollar balances', () async {
+      await methods.setOpeningBalance(humo, 5000000);
+      await exchanges.add(buy(100, 12650, fee: 5000));
+      // Selling $40 back to Humo.
+      await exchanges.add(
+        ExchangeDraft(
+          fromMethodId: cashUsd,
+          fromAmount: 4000,
+          toMethodId: humo,
+          toAmount: 504000,
+          rate: 12600,
+          occurredAt: DateTime(2026, 10, 1),
+        ),
+      );
+
+      final som = await transactions.getBalances();
+      expect(som[humo], 5000000 - 1265000 - 5000 + 504000);
+      expect(som.containsKey(cashUsd), isFalse, reason: 'cents stay apart');
+
+      final usd = await transactions
+          .watchBalances(currency: Currency.usd)
+          .first;
+      expect(usd, {cashUsd: 6000});
+    });
+
+    test('exchanges are not income or expenses', () async {
+      await exchanges.add(buy(100, 12650));
+      expect(await transactions.watchMonthTotals().first, isEmpty);
+      expect(await transactions.watchCount().first, 0);
+    });
+
+    test('amounts must be positive', () async {
+      await expectLater(
+        db
+            .into(db.exchanges)
+            .insert(
+              ExchangesCompanion.insert(
+                fromMethodId: humo,
+                fromAmount: 0,
+                toMethodId: cashUsd,
+                toAmount: 100,
+                rate: 1,
+                occurredAt: DateTime(2026),
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              ),
+            ),
+        throwsA(anything),
+      );
+    });
+  });
+
+  test('ExchangeRateRepository keeps one rate per day', () async {
+    final rates = ExchangeRateRepository(db);
+    expect(await rates.watchLatest(Currency.usd).first, isNull);
+    await rates.save(Currency.usd, DateTime(2026, 9, 29, 9), 12600);
+    await rates.save(Currency.usd, DateTime(2026, 9, 30, 9), 12640);
+    await rates.save(Currency.usd, DateTime(2026, 9, 30, 15), 12650);
+
+    final latest = await rates.watchLatest(Currency.usd).first;
+    expect(latest?.day, DateTime(2026, 9, 30));
+    expect(latest?.rate, 12650);
+    final since = await rates.watchSince(Currency.usd, DateTime(2026, 9)).first;
+    expect(since.map((r) => r.rate), [12600, 12650]);
   });
 
   test('SettingsRepository saves and reads values', () async {

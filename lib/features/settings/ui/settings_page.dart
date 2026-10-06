@@ -292,8 +292,9 @@ class SettingsPage extends ConsumerWidget {
     final items = await ref
         .read(transactionRepositoryProvider)
         .getBetween(allTimeRange.from, allTimeRange.to);
+    final exchanges = await ref.read(exchangeRepositoryProvider).getAll();
     if (!context.mounted) return;
-    if (items.isEmpty) {
+    if (items.isEmpty && exchanges.isEmpty) {
       _toast(context, 'There are no transactions to export yet.');
       return;
     }
@@ -302,7 +303,7 @@ class SettingsPage extends ConsumerWidget {
     ).format(ref.read(clockProvider).now());
     await ref.read(shareTextFileProvider)(
       fileName: 'personal_finance_transactions_$today.csv',
-      content: buildTransactionsCsv(items),
+      content: buildTransactionsCsv(items, exchanges: exchanges),
       mimeType: 'text/csv',
     );
   }

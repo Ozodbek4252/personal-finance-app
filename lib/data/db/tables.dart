@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../models/currency.dart';
 import '../models/transaction_kind.dart';
 
 /// Expense and income categories, like "Groceries" or "Salary".
@@ -36,9 +37,14 @@ class PaymentMethods extends Table {
   BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer()();
 
-  /// Money that was already there before the first transaction, in UZS.
+  /// Money that was already there before the first transaction, in the
+  /// smallest unit of [currency] (so'm or cents).
   IntColumn get openingBalance => integer().withDefault(const Constant(0))();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+
+  /// Money on this method is in this currency. Added in schema 2.
+  TextColumn get currency =>
+      textEnum<Currency>().withDefault(const Constant('uzs'))();
 }
 
 /// One expense or income.
@@ -69,6 +75,62 @@ class Transactions extends Table {
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+}
+
+/// Money moved from one payment method to another in a different
+/// currency, like 1 265 000 UZS from Humo to $100 in Cash (USD).
+///
+/// Exchanges are not income or expenses. They only move money between
+/// balances. Added in schema 2.
+@DataClassName('ExchangeRow')
+@TableIndex(name: 'exchanges_occurred_at', columns: {#occurredAt})
+class Exchanges extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// The method the money leaves.
+  IntColumn get fromMethodId => integer().references(PaymentMethods, #id)();
+
+  /// Amount that leaves, in the smallest unit of the "from" currency.
+  IntColumn get fromAmount =>
+      // ignore: recursive_getters (drift reads the column in its own check)
+      integer().check(fromAmount.isBiggerThanValue(0))();
+
+  /// The method the money arrives at.
+  IntColumn get toMethodId => integer().references(PaymentMethods, #id)();
+
+  /// Amount that arrives, in the smallest unit of the "to" currency.
+  // ignore: recursive_getters (drift reads the column inside its own check)
+  IntColumn get toAmount => integer().check(toAmount.isBiggerThanValue(0))();
+
+  /// UZS for 1 USD at the time of the exchange. Kept, so old exchanges
+  /// never change when the rate changes.
+  RealColumn get rate => real()();
+
+  /// Extra cost taken from the "from" method, in its smallest unit.
+  IntColumn get fee => integer().withDefault(const Constant(0))();
+
+  /// When the exchange happened (local time).
+  DateTimeColumn get occurredAt => dateTime()();
+  TextColumn get note => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
+/// Official rates from the Central Bank (CBU), one per currency and day.
+/// The last one is used when there is no internet. Added in schema 2.
+@DataClassName('ExchangeRateRow')
+class ExchangeRates extends Table {
+  TextColumn get currency => textEnum<Currency>()();
+
+  /// The day the rate is for (local midnight).
+  DateTimeColumn get day => dateTime()();
+
+  /// UZS for 1 unit of [currency].
+  RealColumn get rate => real()();
+
+  @override
+  Set<Column> get primaryKey => {currency, day};
 }
 
 /// Simple key-value store for app settings, like the theme mode.

@@ -23,7 +23,10 @@ class BackupService {
   final AppDatabase _db;
 
   static const _app = 'personal_finance';
-  static const _version = 1;
+
+  /// 1: categories, methods, transactions, settings.
+  /// 2: adds method currency, exchanges and exchange rates.
+  static const _version = 2;
 
   Future<String> create() async {
     final data = {
@@ -42,6 +45,12 @@ class BackupService {
       'settings': [
         for (final r in await _db.select(_db.settings).get()) r.toJson(),
       ],
+      'exchanges': [
+        for (final r in await _db.select(_db.exchanges).get()) r.toJson(),
+      ],
+      'exchangeRates': [
+        for (final r in await _db.select(_db.exchangeRates).get()) r.toJson(),
+      ],
     };
     return const JsonEncoder.withIndent(' ').convert(data);
   }
@@ -58,7 +67,11 @@ class BackupService {
     if (decoded is! Map<String, dynamic> || decoded['app'] != _app) {
       throw const BackupFormatException('This file is not a backup.');
     }
-    if (decoded['version'] != _version) {
+    final version = decoded['version'];
+    if (version is! int || version < 1) {
+      throw const BackupFormatException('This backup file is damaged.');
+    }
+    if (version > _version) {
       throw const BackupFormatException(
         'This backup was made by a newer app version.',
       );
@@ -77,17 +90,28 @@ class BackupService {
     final List<PaymentMethodRow> methods;
     final List<TransactionRow> transactions;
     final List<SettingRow> settings;
+    final List<ExchangeRow> exchanges;
+    final List<ExchangeRateRow> rates;
     try {
       categories = list('categories').map(CategoryRow.fromJson).toList();
-      methods = list('paymentMethods').map(PaymentMethodRow.fromJson).toList();
+      methods = [
+        for (final m in list('paymentMethods'))
+          // Version 1 backups have only so'm methods.
+          PaymentMethodRow.fromJson({'currency': 'uzs', ...m}),
+      ];
       transactions = list('transactions').map(TransactionRow.fromJson).toList();
       settings = list('settings').map(SettingRow.fromJson).toList();
+      exchanges = list('exchanges').map(ExchangeRow.fromJson).toList();
+      rates = list('exchangeRates').map(ExchangeRateRow.fromJson).toList();
     } on Object {
       throw const BackupFormatException('This backup file is damaged.');
     }
 
     await _db.transaction(() async {
-      // Children first, because transactions point to the other tables.
+      // Children first, because transactions and exchanges point to
+      // the other tables.
+      await _db.delete(_db.exchanges).go();
+      await _db.delete(_db.exchangeRates).go();
       await _db.delete(_db.transactions).go();
       await _db.delete(_db.categories).go();
       await _db.delete(_db.paymentMethods).go();
@@ -97,6 +121,8 @@ class BackupService {
         b.insertAll(_db.paymentMethods, methods);
         b.insertAll(_db.transactions, transactions);
         b.insertAll(_db.settings, settings);
+        b.insertAll(_db.exchanges, exchanges);
+        b.insertAll(_db.exchangeRates, rates);
         // Never add sample data on top of restored data.
         b.insert(
           _db.settings,

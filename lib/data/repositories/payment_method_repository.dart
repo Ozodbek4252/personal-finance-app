@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../db/app_database.dart';
+import '../models/currency.dart';
 
 /// Reads and writes payment methods (Cash, Humo, Uzcard, ...).
 class PaymentMethodRepository {
@@ -8,15 +9,25 @@ class PaymentMethodRepository {
 
   final AppDatabase _db;
 
-  Stream<List<PaymentMethodRow>> watchAll({bool includeArchived = false}) {
+  /// Methods in the user's order. Pass [currency] to get only so'm or
+  /// only dollar methods.
+  Stream<List<PaymentMethodRow>> watchAll({
+    bool includeArchived = false,
+    Currency? currency,
+  }) {
     final query = _db.select(_db.paymentMethods)
       ..orderBy([(m) => OrderingTerm.asc(m.sortOrder)]);
     if (!includeArchived) query.where((m) => m.isArchived.equals(false));
+    if (currency != null) query.where((m) => m.currency.equalsValue(currency));
     return query.watch();
   }
 
   /// Adds a custom method at the end of the list. Returns the new id.
-  Future<int> addCustom(String name, {String iconKey = 'box'}) async {
+  Future<int> addCustom(
+    String name, {
+    String iconKey = 'box',
+    Currency currency = Currency.uzs,
+  }) async {
     final maxOrder = _db.paymentMethods.sortOrder.max();
     final last = await (_db.selectOnly(
       _db.paymentMethods,
@@ -29,6 +40,7 @@ class PaymentMethodRepository {
             iconKey: iconKey,
             isCustom: const Value(true),
             sortOrder: (last ?? -1) + 1,
+            currency: Value(currency),
           ),
         );
   }

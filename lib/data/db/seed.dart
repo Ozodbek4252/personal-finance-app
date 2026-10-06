@@ -1,7 +1,11 @@
 import 'package:drift/drift.dart';
 
+import '../../core/time/clock.dart';
+import '../models/currency.dart';
 import '../models/transaction_kind.dart';
+import '../repositories/payment_method_repository.dart';
 import '../repositories/settings_repository.dart';
+import '../repositories/transaction_repository.dart';
 import 'app_database.dart';
 
 /// Default categories, in the design's order: (name, icon, color).
@@ -28,16 +32,17 @@ const _incomeCategories = [
   ('Other', 'box', 'gray'),
 ];
 
-/// Default payment methods: (name, icon, is custom).
+/// Default payment methods: (name, icon, is custom, currency).
 const _paymentMethods = [
-  ('Cash', 'cash', false),
-  ('Humo', 'card', false),
-  ('Uzcard', 'card', false),
-  ('Visa', 'card', false),
-  ('Mastercard', 'card', false),
-  ('Bank transfer', 'bank', false),
-  ('Click wallet', 'phone', true),
-  ('Other', 'box', false),
+  ('Cash', 'cash', false, Currency.uzs),
+  ('Humo', 'card', false, Currency.uzs),
+  ('Uzcard', 'card', false, Currency.uzs),
+  ('Visa', 'card', false, Currency.uzs),
+  ('Mastercard', 'card', false, Currency.uzs),
+  ('Bank transfer', 'bank', false, Currency.uzs),
+  ('Click wallet', 'phone', true, Currency.uzs),
+  ('Other', 'box', false, Currency.uzs),
+  ('Cash (USD)', 'cash', false, Currency.usd),
 ];
 
 /// Adds the default categories and payment methods on first start.
@@ -62,6 +67,7 @@ Future<void> ensureDefaults(AppDatabase db) async {
             iconKey: m.$2,
             isCustom: Value(m.$3),
             sortOrder: i,
+            currency: Value(m.$4),
           ),
         );
       }
@@ -104,32 +110,85 @@ Future<void> seedSampleData(AppDatabase db) async {
       for (final plan in _historyPlans) ...plan.build(ids),
     ];
     await db.batch((b) => b.insertAll(db.transactions, rows));
+    await _seedDollars(db);
     await _coverNegativeBalances(db);
     await settings.set(SettingKeys.userName, 'Ozodbek');
     await settings.set(SettingKeys.sampleDataSeeded, 'true');
   });
 }
 
-/// Gives a starting balance to methods that would be below zero, the
-/// way real cash was there before tracking started.
+/// The design's dollar savings: $500 bought in three exchanges
+/// ($300 in Cash (USD), $200 on a Visa USD card), plus six months of
+/// CBU rates for the rate chart.
+Future<void> _seedDollars(AppDatabase db) async {
+  final ids = await _Ids.load(db);
+  final visaUsd = await PaymentMethodRepository(
+    db,
+  ).addCustom('Visa USD card', iconKey: 'card', currency: Currency.usd);
+  final exchanges = [
+    // (day, dollars, rate, to)
+    (DateTime(2026, 8, 18, 14, 20), 200, 12470.0, ids.method('Cash (USD)')),
+    (DateTime(2026, 9, 12, 10, 5), 200, 12560.0, visaUsd),
+    (DateTime(2026, 9, 30, 11, 30), 100, 12650.0, ids.method('Cash (USD)')),
+  ];
+  await db.batch((b) {
+    for (final (at, dollars, rate, to) in exchanges) {
+      b.insert(
+        db.exchanges,
+        ExchangesCompanion.insert(
+          fromMethodId: ids.method('Humo'),
+          fromAmount: (dollars * rate).round(),
+          toMethodId: to,
+          toAmount: dollars * Currency.usd.minorUnits,
+          rate: rate,
+          occurredAt: at,
+          createdAt: at.add(const Duration(minutes: 1)),
+          updatedAt: at.add(const Duration(minutes: 1)),
+        ),
+      );
+    }
+    // Monthly points for the "USD rate · 6 months" chart.
+    for (final (month, rate) in const [
+      (4, 12410.0),
+      (5, 12470.0),
+      (6, 12520.0),
+      (7, 12480.0),
+      (8, 12560.0),
+    ]) {
+      b.insert(
+        db.exchangeRates,
+        ExchangeRatesCompanion.insert(
+          currency: Currency.usd,
+          day: DateTime(2026, month, 15),
+          rate: rate,
+        ),
+      );
+    }
+    b.insert(
+      db.exchangeRates,
+      ExchangeRatesCompanion.insert(
+        currency: Currency.usd,
+        day: DateTime(2026, 9, 30),
+        rate: 12650,
+      ),
+    );
+  });
+}
+
+/// Gives a starting balance to so'm methods that would be below zero,
+/// the way real cash was there before tracking started.
 Future<void> _coverNegativeBalances(AppDatabase db) async {
-  final rows = await db
-      .customSelect(
-        'SELECT pm.id AS id, COALESCE(SUM('
-        "CASE WHEN t.kind = 'income' THEN t.amount ELSE -t.amount END"
-        '), 0) AS net FROM payment_methods pm '
-        'LEFT JOIN transactions t ON t.payment_method_id = pm.id '
-        'GROUP BY pm.id',
-      )
-      .get();
-  for (final row in rows) {
-    final net = row.read<int>('net');
+  final balances = await TransactionRepository(
+    db,
+    const SystemClock(),
+  ).getBalances();
+  for (final MapEntry(key: id, value: net) in balances.entries) {
     if (net >= 0) continue;
     // Round up to the next 100 000 and keep 500 000 left over.
     final opening = ((-net + 99999) ~/ 100000) * 100000 + 500000;
-    await (db.update(db.paymentMethods)
-          ..where((m) => m.id.equals(row.read<int>('id'))))
-        .write(PaymentMethodsCompanion(openingBalance: Value(opening)));
+    await (db.update(db.paymentMethods)..where((m) => m.id.equals(id))).write(
+      PaymentMethodsCompanion(openingBalance: Value(opening)),
+    );
   }
 }
 
