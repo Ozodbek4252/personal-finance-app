@@ -68,7 +68,7 @@ class SettingsPage extends ConsumerWidget {
                         icon: AppIcons.coins,
                         label: 'Primary currency',
                         value: 'UZS · so’m',
-                        onTap: () => _showCurrency(context),
+                        onTap: () => context.push(Routes.currencies),
                       ),
                       _SettingRow(
                         icon: AppIcons.hash,
@@ -127,8 +127,8 @@ class SettingsPage extends ConsumerWidget {
                       _SettingRow(
                         icon: AppIcons.coins,
                         label: 'Currencies',
-                        value: '1 active',
-                        onTap: () => _showCurrency(context),
+                        value: '2 active',
+                        onTap: () => context.push(Routes.currencies),
                       ),
                     ],
                   ),
@@ -212,19 +212,6 @@ class SettingsPage extends ConsumerWidget {
       await ref.read(settingsRepositoryProvider).setUserName(name);
     }
   }
-
-  Future<void> _showCurrency(BuildContext context) => showOptionSheet<String>(
-    context,
-    title: 'Currency',
-    selected: 'UZS',
-    options: const [
-      SheetOption(
-        value: 'UZS',
-        label: 'UZS · Uzbek so’m',
-        subtitle: 'Other currencies are not supported yet',
-      ),
-    ],
-  );
 
   Future<void> _showLanguage(BuildContext context) => showOptionSheet<String>(
     context,

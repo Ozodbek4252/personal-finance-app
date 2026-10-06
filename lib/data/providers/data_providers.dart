@@ -7,6 +7,8 @@ import '../models/exchange_details.dart';
 import '../models/month_totals.dart';
 import '../models/transaction_details.dart';
 import '../models/transaction_kind.dart';
+import '../rates/rate_service.dart';
+import '../rates/rate_source.dart';
 import '../repositories/category_repository.dart';
 import '../repositories/exchange_rate_repository.dart';
 import '../repositories/exchange_repository.dart';
@@ -142,3 +144,35 @@ final latestRateProvider = StreamProvider.family<ExchangeRateRow?, Currency>(
 final transactionProvider = StreamProvider.family<TransactionDetails?, int>(
   (ref, id) => ref.watch(transactionRepositoryProvider).watchById(id),
 );
+
+// ---- Exchange rate. ----
+
+/// Where official rates come from. Tests replace it with a fake.
+final rateSourceProvider = Provider<RateSource>((ref) => const CbuRateSource());
+
+final rateServiceProvider = Provider(
+  (ref) => RateService(
+    ref.watch(rateSourceProvider),
+    ref.watch(exchangeRateRepositoryProvider),
+    ref.watch(settingsRepositoryProvider),
+    ref.watch(clockProvider),
+  ),
+);
+
+/// The USD rate in use: the manual one when the user chose Manual,
+/// else the newest saved CBU rate. Null while there is no rate at all
+/// (first start without internet).
+final usdRateProvider = Provider<UsdRate?>((ref) {
+  final settings = ref.watch(currentSettingsProvider);
+  final manual = settings.usdManualRate;
+  if (settings.usdRateManual && manual != null) {
+    return UsdRate(value: manual, manual: true);
+  }
+  final saved = ref.watch(latestRateProvider(Currency.usd)).value;
+  if (saved == null) return null;
+  return UsdRate(
+    value: saved.rate,
+    manual: false,
+    updatedAt: settings.usdRateFetchedAt,
+  );
+});

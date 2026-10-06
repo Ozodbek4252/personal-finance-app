@@ -67,6 +67,18 @@ abstract final class MoneyFormat {
     return body;
   }
 
+  /// An exchange rate: 12650 → "12 650", 11778.45 → "11 778.45".
+  /// Decimals show only when there are any. With the dot number style
+  /// the decimal mark is a comma: "11.778,45".
+  static String rate(double value) {
+    final cents = (value * 100).round();
+    final whole = amount(cents ~/ 100);
+    final rest = cents % 100;
+    if (rest == 0) return whole;
+    final mark = style == NumberStyle.dot ? ',' : '.';
+    return '$whole$mark${rest.toString().padLeft(2, '0')}';
+  }
+
   /// Turns raw keypad input ("35000") into an int. Empty input is 0.
   static int parseDigits(String input) {
     final digits = input.replaceAll(RegExp(r'[^0-9]'), '');

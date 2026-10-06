@@ -62,4 +62,13 @@ void main() {
       expect(PercentFormat.points(-1.6), '−1.6 pts');
     });
   });
+
+  test('rate shows decimals only when there are any', () {
+    expect(MoneyFormat.rate(12650), '12\u00A0650');
+    expect(MoneyFormat.rate(11778.45), '11\u00A0778.45');
+    expect(MoneyFormat.rate(11778.4), '11\u00A0778.40');
+    MoneyFormat.style = NumberStyle.dot;
+    addTearDown(() => MoneyFormat.style = NumberStyle.space);
+    expect(MoneyFormat.rate(11778.45), '11.778,45');
+  });
 }

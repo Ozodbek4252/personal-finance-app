@@ -17,6 +17,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.primary,
     required this.onPrimary,
     required this.accent,
+    required this.accentSoft,
     required this.hero,
     required this.income,
     required this.incomeSoft,
@@ -60,6 +61,10 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Active bottom nav tab and the amount cursor.
   final Color accent;
 
+  /// Light [accent] background, like the "Main" badge or the exchange
+  /// icon tile. Text and icons on it use [accent].
+  final Color accentSoft;
+
   /// Filled "Current balance" card. Text on it is white.
   final Color hero;
 
@@ -85,6 +90,7 @@ class AppColors extends ThemeExtension<AppColors> {
     primary: Color(0xFF4F46E5),
     onPrimary: Color(0xFFFFFFFF),
     accent: Color(0xFF4F46E5),
+    accentSoft: Color(0xFFEAEAFD),
     hero: Color(0xFF4F46E5),
     income: Color(0xFF15803D),
     incomeSoft: Color(0xFFE3F5E9),
@@ -107,6 +113,7 @@ class AppColors extends ThemeExtension<AppColors> {
     primary: Color(0xFF6366F1),
     onPrimary: Color(0xFFFFFFFF),
     accent: Color(0xFF818CF8),
+    accentSoft: Color(0x29818CF8),
     hero: Color(0xFF3730A3),
     income: Color(0xFF4ADE80),
     incomeSoft: Color(0x214ADE80), // 13%
@@ -131,6 +138,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? primary,
     Color? onPrimary,
     Color? accent,
+    Color? accentSoft,
     Color? hero,
     Color? income,
     Color? incomeSoft,
@@ -152,6 +160,7 @@ class AppColors extends ThemeExtension<AppColors> {
       primary: primary ?? this.primary,
       onPrimary: onPrimary ?? this.onPrimary,
       accent: accent ?? this.accent,
+      accentSoft: accentSoft ?? this.accentSoft,
       hero: hero ?? this.hero,
       income: income ?? this.income,
       incomeSoft: incomeSoft ?? this.incomeSoft,
@@ -179,6 +188,7 @@ class AppColors extends ThemeExtension<AppColors> {
       primary: l(primary, other.primary),
       onPrimary: l(onPrimary, other.onPrimary),
       accent: l(accent, other.accent),
+      accentSoft: l(accentSoft, other.accentSoft),
       hero: l(hero, other.hero),
       income: l(income, other.income),
       incomeSoft: l(incomeSoft, other.incomeSoft),
