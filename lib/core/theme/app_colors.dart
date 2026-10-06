@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Color tokens from the "Personal Finance App" design.
+/// Color tokens from the "Personal Finance App" design (indigo palette).
 ///
 /// Read them in widgets with `context.colors` (see [AppColorsX]).
 @immutable
@@ -16,6 +16,8 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.border,
     required this.primary,
     required this.onPrimary,
+    required this.accent,
+    required this.hero,
     required this.income,
     required this.incomeSoft,
     required this.expense,
@@ -49,9 +51,17 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Outlines of inputs and outlined buttons.
   final Color border;
 
-  /// Main buttons and the center add button.
+  /// Main buttons, the center add button, selected chips and switches.
   final Color primary;
+
+  /// Text and icons on [primary].
   final Color onPrimary;
+
+  /// Active bottom nav tab and the amount cursor.
+  final Color accent;
+
+  /// Filled "Current balance" card. Text on it is white.
+  final Color hero;
 
   final Color income;
   final Color incomeSoft;
@@ -64,42 +74,46 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color highlight;
 
   static const light = AppColors(
-    background: Color(0xFFF5F4F0),
+    background: Color(0xFFF4F4FA),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFEEEDE8),
-    textPrimary: Color(0xFF141416),
-    textSecondary: Color(0xFF56554F),
-    textTertiary: Color(0xFF6E6C66),
-    divider: Color(0xFFE4E2DB),
-    border: Color(0xFFD9D7D0),
-    primary: Color(0xFF141416),
+    surfaceMuted: Color(0xFFECECF5),
+    textPrimary: Color(0xFF15162B),
+    textSecondary: Color(0xFF50526C),
+    textTertiary: Color(0xFF666883),
+    divider: Color(0xFFE2E2EE),
+    border: Color(0xFFD5D5E8),
+    primary: Color(0xFF4F46E5),
     onPrimary: Color(0xFFFFFFFF),
-    income: Color(0xFF17784F),
-    incomeSoft: Color(0xFFE2F1E9),
-    expense: Color(0xFFC0432A),
-    expenseSoft: Color(0xFFF9E7E2),
-    savings: Color(0xFF2A55BE),
-    savingsSoft: Color(0xFFE5EBF8),
-    highlight: Color(0xFFFBEFD8),
+    accent: Color(0xFF4F46E5),
+    hero: Color(0xFF4F46E5),
+    income: Color(0xFF15803D),
+    incomeSoft: Color(0xFFE3F5E9),
+    expense: Color(0xFFBE123C),
+    expenseSoft: Color(0xFFFDE7EC),
+    savings: Color(0xFF7C3AED),
+    savingsSoft: Color(0xFFF1EAFE),
+    highlight: Color(0xFFFDF3D7),
   );
 
   static const dark = AppColors(
-    background: Color(0xFF0E0E10),
-    surface: Color(0xFF18181B),
-    surfaceMuted: Color(0xFF232327),
-    textPrimary: Color(0xFFF3F2EF),
-    textSecondary: Color(0xFFAAA8A2),
-    textTertiary: Color(0xFF98968F),
-    divider: Color(0xFF2A2A2F),
-    border: Color(0xFF34343A),
-    primary: Color(0xFFF3F2EF),
-    onPrimary: Color(0xFF0E0E10),
-    income: Color(0xFF4FC28B),
-    incomeSoft: Color(0x244FC28B), // 14%
-    expense: Color(0xFFF08A70),
-    expenseSoft: Color(0x24F08A70), // 14%
-    savings: Color(0xFF8DA8F3),
-    savingsSoft: Color(0x248DA8F3), // 14%
+    background: Color(0xFF0C0D1A),
+    surface: Color(0xFF161729),
+    surfaceMuted: Color(0xFF20223A),
+    textPrimary: Color(0xFFEEEEF8),
+    textSecondary: Color(0xFFA9AAC4),
+    textTertiary: Color(0xFF9193B0),
+    divider: Color(0xFF262842),
+    border: Color(0xFF2E3150),
+    primary: Color(0xFF6366F1),
+    onPrimary: Color(0xFFFFFFFF),
+    accent: Color(0xFF818CF8),
+    hero: Color(0xFF3730A3),
+    income: Color(0xFF4ADE80),
+    incomeSoft: Color(0x214ADE80), // 13%
+    expense: Color(0xFFFB7185),
+    expenseSoft: Color(0x24FB7185), // 14%
+    savings: Color(0xFFA78BFA),
+    savingsSoft: Color(0x26A78BFA), // 15%
     // Not shown in the dark boards; a muted amber that keeps text readable.
     highlight: Color(0x52E9B45E),
   );
@@ -116,6 +130,8 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? border,
     Color? primary,
     Color? onPrimary,
+    Color? accent,
+    Color? hero,
     Color? income,
     Color? incomeSoft,
     Color? expense,
@@ -135,6 +151,8 @@ class AppColors extends ThemeExtension<AppColors> {
       border: border ?? this.border,
       primary: primary ?? this.primary,
       onPrimary: onPrimary ?? this.onPrimary,
+      accent: accent ?? this.accent,
+      hero: hero ?? this.hero,
       income: income ?? this.income,
       incomeSoft: incomeSoft ?? this.incomeSoft,
       expense: expense ?? this.expense,
@@ -160,6 +178,8 @@ class AppColors extends ThemeExtension<AppColors> {
       border: l(border, other.border),
       primary: l(primary, other.primary),
       onPrimary: l(onPrimary, other.onPrimary),
+      accent: l(accent, other.accent),
+      hero: l(hero, other.hero),
       income: l(income, other.income),
       incomeSoft: l(incomeSoft, other.incomeSoft),
       expense: l(expense, other.expense),

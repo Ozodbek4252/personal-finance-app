@@ -105,7 +105,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final color = selected ? c.textPrimary : c.textTertiary;
+    final color = selected ? c.accent : c.textTertiary;
     return Semantics(
       container: true,
       button: true,

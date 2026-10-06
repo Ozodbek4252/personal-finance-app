@@ -340,7 +340,7 @@ class _CategoryFormPageState extends ConsumerState<CategoryFormPage> {
                             ),
                             Switch(
                               value: _showOnAddScreen,
-                              activeTrackColor: c.income,
+                              activeTrackColor: c.primary,
                               activeThumbColor: Colors.white,
                               onChanged: (v) =>
                                   setState(() => _showOnAddScreen = v),

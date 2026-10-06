@@ -29,8 +29,8 @@ abstract final class AppSpacing {
 /// Card shadows. Dark mode uses a thin light outline instead.
 abstract final class AppShadows {
   static const cardLight = [
-    BoxShadow(color: Color(0x0A141416), offset: Offset(0, 1), blurRadius: 2),
-    BoxShadow(color: Color(0x0D141416), offset: Offset(0, 6), blurRadius: 20),
+    BoxShadow(color: Color(0x0D15162B), offset: Offset(0, 1), blurRadius: 2),
+    BoxShadow(color: Color(0x0F4F46E5), offset: Offset(0, 6), blurRadius: 20),
   ];
 
   static const cardDark = [
@@ -39,7 +39,12 @@ abstract final class AppShadows {
 
   /// Shadow under the round add button in the bottom nav.
   static const fab = [
-    BoxShadow(color: Color(0x47141416), offset: Offset(0, 6), blurRadius: 18),
+    BoxShadow(color: Color(0x594F46E5), offset: Offset(0, 8), blurRadius: 20),
+  ];
+
+  /// Indigo glow under the filled "Current balance" card.
+  static const hero = [
+    BoxShadow(color: Color(0x474F46E5), offset: Offset(0, 10), blurRadius: 28),
   ];
 
   static List<BoxShadow> card(Brightness brightness) =>

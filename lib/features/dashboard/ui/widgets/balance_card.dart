@@ -5,8 +5,8 @@ import '../../../../core/format/money_format.dart';
 import '../../../../core/icons/app_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/widgets/amount_text.dart';
-import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/buttons.dart';
 import '../../../../core/widgets/pill.dart';
 import '../../../../data/providers/data_providers.dart';
@@ -19,15 +19,25 @@ class BalanceCard extends ConsumerWidget {
   /// The design shows the three biggest methods.
   static const _maxChips = 3;
 
+  /// White text on the indigo card, at the design's opacities.
+  static const _soft = Color(0xD1FFFFFF); // 82%
+  static const _unit = Color(0xBFFFFFFF); // 75%
+  static const _chip = Color(0x29FFFFFF); // 16%
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     final summary = ref.watch(balanceSummaryProvider).value;
     final hidden = summary?.hidden ?? false;
 
-    return AppCard(
-      radius: 24,
+    // A filled indigo card, so the balance stands out from the others.
+    return Container(
       padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: c.hero,
+        borderRadius: BorderRadius.circular(AppRadius.cardLarge),
+        boxShadow: AppShadows.hero,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -36,7 +46,7 @@ class BalanceCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Current balance',
-                  style: AppText.label14.copyWith(color: c.textSecondary),
+                  style: AppText.label14.copyWith(color: _soft),
                 ),
               ),
               Transform.translate(
@@ -44,7 +54,7 @@ class BalanceCard extends ConsumerWidget {
                 child: CircleIconButton(
                   icon: hidden ? AppIcons.eyeOff : AppIcons.eye,
                   iconSize: 18,
-                  color: c.textTertiary,
+                  color: _soft,
                   semanticLabel: hidden ? 'Show balance' : 'Hide balance',
                   onTap: () => ref
                       .read(settingsRepositoryProvider)
@@ -57,8 +67,9 @@ class BalanceCard extends ConsumerWidget {
           AmountText(
             summary?.total ?? 0,
             hidden: hidden,
+            color: Colors.white,
             style: AppText.amount40,
-            unitStyle: AppText.body17,
+            unitStyle: AppText.body17.copyWith(color: _unit),
             unitGap: 8,
           ),
           if (summary != null && summary.methods.isNotEmpty) ...[
@@ -71,6 +82,8 @@ class BalanceCard extends ConsumerWidget {
                   Pill(
                     '${m.method.name} '
                     '${hidden ? '••••' : MoneyFormat.amount(m.balance)}',
+                    background: _chip,
+                    foreground: Colors.white,
                   ),
               ],
             ),

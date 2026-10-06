@@ -51,9 +51,11 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: c.primary,
-        contentTextStyle: AppText.label14.copyWith(color: c.onPrimary),
-        actionTextColor: c.onPrimary,
+        // Dark on light (and light on dark), so it stands apart from the
+        // indigo buttons.
+        backgroundColor: c.textPrimary,
+        contentTextStyle: AppText.label14.copyWith(color: c.background),
+        actionTextColor: c.background,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -61,6 +63,7 @@ abstract final class AppTheme {
         modalBackgroundColor: c.surface,
         showDragHandle: true,
         dragHandleColor: c.border,
+        modalBarrierColor: const Color(0x7A15162B), // 48% ink
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),

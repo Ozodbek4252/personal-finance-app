@@ -403,7 +403,7 @@ class _RadioRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selected ? c.textPrimary : c.divider,
+                    color: selected ? c.primary : c.divider,
                     width: 2,
                   ),
                 ),
@@ -412,7 +412,7 @@ class _RadioRow extends StatelessWidget {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: c.textPrimary,
+                          color: c.primary,
                           shape: BoxShape.circle,
                         ),
                       )

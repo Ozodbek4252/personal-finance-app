@@ -141,7 +141,7 @@ class SettingsPage extends ConsumerWidget {
                         label: 'App lock',
                         trailing: Switch(
                           value: settings.appLock,
-                          activeTrackColor: context.colors.income,
+                          activeTrackColor: context.colors.primary,
                           activeThumbColor: Colors.white,
                           onChanged: (on) => _setAppLock(context, ref, on),
                         ),

@@ -1,0 +1,10 @@
+# App icon "B · Split" from the design. Run:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: assets/icon/app_icon.png
+  android: true
+  adaptive_icon_background: "#F4F4FA"
+  adaptive_icon_foreground: assets/icon/app_icon_foreground.png
+  adaptive_icon_monochrome: assets/icon/app_icon_monochrome.png
+  ios: true
+  remove_alpha_ios: true
