@@ -50,7 +50,8 @@ class BalanceCard extends ConsumerWidget {
 
     // A filled indigo card, so the balance stands out from the others.
     return Container(
-      padding: const EdgeInsets.all(20),
+      // Less on top: the 44 px eye button already adds room there.
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       decoration: BoxDecoration(
         color: context.colors.hero,
         borderRadius: BorderRadius.circular(AppRadius.cardLarge),
@@ -81,6 +82,7 @@ class BalanceCard extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 4),
           AmountText(
             summary?.total ?? 0,
             hidden: hidden,
@@ -178,17 +180,16 @@ class _DollarRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    dollars,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.body16Strong.copyWith(color: Colors.white),
-                  ),
+                // The dollars take the width they need; the so'm text gets
+                // the rest and is cut first.
+                Text(
+                  dollars,
+                  maxLines: 1,
+                  style: AppText.body16Strong.copyWith(color: Colors.white),
                 ),
                 if (som != null && cents != 0) ...[
                   const SizedBox(width: 8),
-                  Flexible(
+                  Expanded(
                     child: Text(
                       '≈ ${hidden ? BalanceCard._dots : MoneyFormat.withCurrency(som)}',
                       maxLines: 1,
@@ -198,8 +199,8 @@ class _DollarRow extends StatelessWidget {
                       ),
                     ),
                   ),
-                ],
-                const Spacer(),
+                ] else
+                  const Spacer(),
                 const AppIcon(
                   AppIcons.chevronRight,
                   size: 18,

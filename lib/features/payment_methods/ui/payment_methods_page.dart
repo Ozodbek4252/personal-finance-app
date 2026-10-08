@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/amount_input_formatter.dart';
 import '../../../core/format/money_format.dart';
+import '../../../core/format/rate_input.dart';
 import '../../../core/icons/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -13,6 +15,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/option_sheet.dart';
+import '../../../core/widgets/segmented_tabs.dart';
 import '../../../core/widgets/text_input_dialog.dart';
 import '../../../data/models/currency.dart';
 import '../../../data/db/app_database.dart';
@@ -31,6 +34,9 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
   final _newName = TextEditingController();
   final _newNameFocus = FocusNode();
 
+  /// Currency of the method being added.
+  Currency _newCurrency = Currency.uzs;
+
   @override
   void initState() {
     super.initState();
@@ -44,22 +50,30 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
     super.dispose();
   }
 
+  /// So'm methods.
   List<PaymentMethodRow> get _methods =>
       ref.read(paymentMethodsProvider).value ?? const [];
 
-  /// Error for a method name, or null when it is fine.
+  List<PaymentMethodRow> get _dollarMethods =>
+      ref.read(dollarMethodsProvider).value ?? const [];
+
+  /// Error for a method name, or null when it is fine. Names are unique
+  /// across both currencies.
   String? _nameError(String text, {int? exceptId}) {
     final name = text.trim().toLowerCase();
     if (name.isEmpty) return 'Enter a name';
-    final taken = _methods.any(
-      (m) => m.name.toLowerCase() == name && m.id != exceptId,
-    );
+    final taken = [
+      ..._methods,
+      ..._dollarMethods,
+    ].any((m) => m.name.toLowerCase() == name && m.id != exceptId);
     return taken ? 'You already have this method' : null;
   }
 
   Future<void> _add() async {
     if (_nameError(_newName.text) != null) return;
-    await ref.read(paymentMethodRepositoryProvider).addCustom(_newName.text);
+    await ref
+        .read(paymentMethodRepositoryProvider)
+        .addCustom(_newName.text, currency: _newCurrency);
     _newName.clear();
     _newNameFocus.unfocus();
   }
@@ -85,14 +99,24 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
     }
   }
 
+  /// "820 000 UZS" or "$300.00".
+  static String _money(Currency currency, int minor) => switch (currency) {
+    Currency.uzs => MoneyFormat.withCurrency(minor),
+    Currency.usd => MoneyFormat.dollars(minor),
+  };
+
   Future<void> _openMethod(PaymentMethodRow m, bool isDefault) async {
-    final balance = ref.read(balancesProvider(Currency.uzs)).value?[m.id] ?? 0;
-    final canRemove = !isDefault && _methods.length > 1;
+    final dollars = m.currency == Currency.usd;
+    final balance = ref.read(balancesProvider(m.currency)).value?[m.id] ?? 0;
+    // Keep at least one method of each currency.
+    final sameCurrency = dollars ? _dollarMethods : _methods;
+    final canRemove = !isDefault && sameCurrency.length > 1;
     final action = await showOptionSheet<String>(
       context,
-      title: '${m.name} · ${MoneyFormat.withCurrency(balance)}',
+      title: '${m.name} · ${_money(m.currency, balance)}',
       options: [
-        if (!isDefault)
+        // The default is for new expenses and income, which are in so'm.
+        if (!isDefault && !dollars)
           const SheetOption(
             value: 'default',
             label: 'Make default',
@@ -106,7 +130,7 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
         SheetOption(
           value: 'opening',
           label: 'Starting balance',
-          subtitle: MoneyFormat.withCurrency(m.openingBalance),
+          subtitle: _money(m.currency, m.openingBalance),
           leading: const AppIcon(AppIcons.wallet, size: 20),
         ),
         if (canRemove)
@@ -132,6 +156,27 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
           validate: (t) => _nameError(t, exceptId: m.id),
         );
         if (name != null) await repo.rename(m.id, name);
+      case 'opening' when dollars:
+        final text = await showTextInputDialog(
+          context,
+          title: 'Starting balance',
+          initial: m.openingBalance == 0
+              ? ''
+              : RateInput.plain(m.openingBalance / 100),
+          hint: '0',
+          suffix: Currency.usd.code,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+          ],
+          validate: (t) => t.trim().isEmpty || RateInput.parse(t) != null
+              ? null
+              : 'Type an amount, like 300 or 12.50',
+        );
+        if (text != null) {
+          final value = RateInput.parse(text) ?? 0;
+          await repo.setOpeningBalance(m.id, (value * 100).round());
+        }
       case 'opening':
         final text = await showTextInputDialog(
           context,
@@ -156,6 +201,9 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
   Widget build(BuildContext context) {
     final c = context.colors;
     final methods = ref.watch(paymentMethodsProvider).value ?? const [];
+    final dollarMethods = ref.watch(dollarMethodsProvider).value ?? const [];
+    final dollarBalances =
+        ref.watch(balancesProvider(Currency.usd)).value ?? const {};
     final defaultId = ref.watch(currentSettingsProvider).defaultPaymentMethodId;
     final month = monthStart(ref.watch(clockProvider).now());
     final counts = <int, int>{};
@@ -222,7 +270,7 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
                     child: Text(
-                      'YOUR METHODS',
+                      'SO’M METHODS',
                       style: AppText.overline13.copyWith(
                         color: c.textSecondary,
                       ),
@@ -246,6 +294,39 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
                       ],
                     ),
                   ),
+                  if (dollarMethods.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                      child: Text(
+                        'DOLLAR METHODS',
+                        style: AppText.overline13.copyWith(
+                          color: c.textSecondary,
+                        ),
+                      ),
+                    ),
+                    AppCard(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      child: Column(
+                        children: [
+                          for (final (i, m) in dollarMethods.indexed)
+                            _MethodRow(
+                              method: m,
+                              count: 0,
+                              subtitle:
+                                  'Balance '
+                                  '${MoneyFormat.dollars(dollarBalances[m.id] ?? 0)}',
+                              isDefault: false,
+                              showDivider: i > 0,
+                              onTap: () => _openMethod(m, false),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   AppCard(
                     child: Column(
@@ -256,6 +337,15 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
                           style: AppText.overline13.copyWith(
                             color: c.textSecondary,
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        SegmentedTabs(
+                          options: const [
+                            SegmentOption(Currency.uzs, 'So’m (UZS)'),
+                            SegmentOption(Currency.usd, 'Dollar (USD)'),
+                          ],
+                          selected: _newCurrency,
+                          onChanged: (c) => setState(() => _newCurrency = c),
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -272,7 +362,9 @@ class _PaymentMethodsPageState extends ConsumerState<PaymentMethodsPage> {
                                 style: AppText.body15Regular,
                                 decoration: InputDecoration(
                                   counterText: '',
-                                  hintText: 'e.g. Payme, Kapitalbank card',
+                                  hintText: _newCurrency == Currency.usd
+                                      ? 'e.g. Visa USD card'
+                                      : 'e.g. Payme, Kapitalbank card',
                                   hintStyle: AppText.body15Regular.copyWith(
                                     color: c.textTertiary,
                                   ),
@@ -377,10 +469,14 @@ class _MethodRow extends StatelessWidget {
     required this.isDefault,
     required this.showDivider,
     required this.onTap,
+    this.subtitle,
   });
 
   final PaymentMethodRow method;
   final int count;
+
+  /// Replaces "N transactions this month", like "Balance $300.00".
+  final String? subtitle;
   final bool isDefault;
   final bool showDivider;
   final VoidCallback onTap;
@@ -426,10 +522,11 @@ class _MethodRow extends StatelessWidget {
                     Text(method.name, style: AppText.body15),
                     const SizedBox(height: 2),
                     Text(
-                      count == 0
-                          ? 'None this month'
-                          : '$count ${count == 1 ? 'transaction' : 'transactions'} '
-                                'this month',
+                      subtitle ??
+                          (count == 0
+                              ? 'None this month'
+                              : '$count ${count == 1 ? 'transaction' : 'transactions'} '
+                                    'this month'),
                       style: AppText.small12Regular.copyWith(
                         color: c.textTertiary,
                       ),

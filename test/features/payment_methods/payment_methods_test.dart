@@ -34,7 +34,8 @@ void main() {
     expect(find.byType(PaymentMethodsPage), findsOneWidget);
     expect(find.text('Default for new transactions'), findsOneWidget);
     expect(find.text('Default'), findsOneWidget);
-    expect(find.text('Custom'), findsOneWidget);
+    // Click wallet and the sample "Visa USD card".
+    expect(find.text('Custom'), findsNWidgets(2));
     expect(find.textContaining('transactions this month'), findsWidgets);
   });
 
@@ -111,5 +112,65 @@ void main() {
     await tester.tap(find.text('Manage payment methods'));
     await tester.pumpAndSettle();
     expect(find.byType(PaymentMethodsPage), findsOneWidget);
+  });
+
+  group('dollar methods', () {
+    Future<void> scrollTo(WidgetTester tester, Finder f) async {
+      await tester.scrollUntilVisible(
+        f,
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testApp('are listed with their dollar balance', sampleData: true, (
+      tester,
+      db,
+    ) async {
+      await _open(tester);
+      await scrollTo(tester, find.text('DOLLAR METHODS'));
+      expect(find.text(r'Balance $300.00'), findsOneWidget);
+      expect(find.text(r'Balance $200.00'), findsOneWidget);
+    });
+
+    testApp('can be added with the USD choice', (tester, db) async {
+      await _open(tester);
+      await scrollTo(tester, find.text('Dollar (USD)'));
+      await tester.tap(find.text('Dollar (USD)'));
+      await tester.pump();
+      // Names are unique across both currencies.
+      await tester.enterText(find.byType(TextField), 'cash (usd)');
+      await tester.pump();
+      expect(find.text('You already have this method'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Visa USD card');
+      await tester.pump();
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+      final visa = await _method(tester, db, 'Visa USD card');
+      expect(visa.currency.code, 'USD');
+    });
+
+    testApp('take a starting balance in dollars; the last one stays', (
+      tester,
+      db,
+    ) async {
+      await _open(tester);
+      await scrollTo(tester, find.text('Cash (USD)'));
+      await tester.tap(find.text('Cash (USD)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Make default'), findsNothing);
+      expect(find.text('Remove'), findsNothing, reason: 'only dollar method');
+
+      await tester.tap(find.text('Starting balance'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, '12.50');
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      final cash = await _method(tester, db, 'Cash (USD)');
+      expect(cash.openingBalance, 1250);
+    });
   });
 }
