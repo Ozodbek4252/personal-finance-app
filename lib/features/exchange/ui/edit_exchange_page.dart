@@ -31,45 +31,39 @@ class _EditExchangePageState extends ConsumerState<EditExchangePage> {
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        CircleIconButton.raised(
-                          icon: AppIcons.close,
-                          semanticLabel: 'Close',
-                          onTap: () => context.pop(),
-                        ),
-                        Expanded(
-                          child: Semantics(
-                            header: true,
-                            child: Text(
-                              'Edit exchange',
-                              textAlign: TextAlign.center,
-                              style: AppText.heading17,
-                            ),
-                          ),
-                        ),
-                        // Same width as the close button, so the title
-                        // stays centered.
-                        const SizedBox(width: 44),
-                      ],
+        // The form scrolls inside, so its keypad stays at the bottom.
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  CircleIconButton.raised(
+                    icon: AppIcons.close,
+                    semanticLabel: 'Close',
+                    onTap: () => context.pop(),
+                  ),
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        'Edit exchange',
+                        textAlign: TextAlign.center,
+                        style: AppText.heading17,
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    if (original != null)
-                      Expanded(child: ExchangeForm(editing: original)),
-                  ],
-                ),
+                  ),
+                  // Same width as the close button, so the title stays
+                  // centered.
+                  const SizedBox(width: 44),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              if (original != null)
+                Expanded(child: ExchangeForm(editing: original)),
+            ],
+          ),
         ),
       ),
     );

@@ -70,6 +70,45 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final method = methods.where((m) => m.id == methodId).firstOrNull;
     final now = ref.watch(clockProvider).now();
 
+    final header = _Header(
+      tab: _exchange
+          ? AddTab.exchange
+          : state.kind == TransactionKind.income
+          ? AddTab.income
+          : AddTab.expense,
+      onTab: (tab) {
+        setState(() => _exchange = tab == AddTab.exchange);
+        if (tab != AddTab.exchange) {
+          controller.setKind(
+            tab == AddTab.income
+                ? TransactionKind.income
+                : TransactionKind.expense,
+          );
+        }
+      },
+      onClose: () => context.pop(),
+    );
+
+    // The Exchange form fills the screen and scrolls inside, so its
+    // keypad stays at the bottom.
+    if (_exchange) {
+      return Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                header,
+                const SizedBox(height: 16),
+                Expanded(child: ExchangeForm(startSelling: widget.sellDollars)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
@@ -81,39 +120,16 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _Header(
-                      tab: _exchange
-                          ? AddTab.exchange
-                          : state.kind == TransactionKind.income
-                          ? AddTab.income
-                          : AddTab.expense,
-                      onTab: (tab) {
-                        setState(() => _exchange = tab == AddTab.exchange);
-                        if (tab != AddTab.exchange) {
-                          controller.setKind(
-                            tab == AddTab.income
-                                ? TransactionKind.income
-                                : TransactionKind.expense,
-                          );
-                        }
-                      },
-                      onClose: () => context.pop(),
+                    header,
+                    ..._transactionBody(
+                      context,
+                      state,
+                      controller,
+                      method,
+                      methods,
+                      categories,
+                      now,
                     ),
-                    if (_exchange) ...[
-                      const SizedBox(height: 16),
-                      Expanded(
-                        child: ExchangeForm(startSelling: widget.sellDollars),
-                      ),
-                    ] else
-                      ..._transactionBody(
-                        context,
-                        state,
-                        controller,
-                        method,
-                        methods,
-                        categories,
-                        now,
-                      ),
                   ],
                 ),
               ),

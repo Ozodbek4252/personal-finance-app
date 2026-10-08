@@ -50,123 +50,142 @@ class ExchangeForm extends ConsumerWidget {
     final now = ref.watch(clockProvider).now();
     final amounts = view.amounts;
 
+    // The cards scroll; the keypad and the button stay at the bottom,
+    // so they are always in reach, even on short phones or big text.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _MoneyCard(
-          side: ExchangeSide.give,
-          currency: view.giveCurrency,
-          amount: amounts?.give ?? 0,
-          active: form.typed == ExchangeSide.give,
-          method: view.from,
-          balanceText: _balanceText(view.from, view.fromBalance),
-          // Red only once an amount is typed that is more than the
-          // method holds.
-          balanceShort:
-              view.from != null &&
-              (amounts?.give ?? 0) > 0 &&
-              amounts!.give + form.fee > view.fromBalance,
-          onTap: () => controller.focus(ExchangeSide.give, amounts),
-          onCurrency: controller.swap,
-          onMethod: () => _pickMethod(
-            context,
-            view.fromMethods,
-            view.from,
-            controller.selectFromMethod,
-          ),
-        ),
-        // The swap button sits on the gap between the two cards.
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 14),
-              child: _MoneyCard(
-                side: ExchangeSide.get,
-                currency: view.getCurrency,
-                amount: amounts?.get ?? 0,
-                active: form.typed == ExchangeSide.get,
-                method: view.to,
-                balanceText: view.to == null
-                    ? null
-                    : 'Balance ${_format(view.to!.currency, view.toBalance)}'
-                          ' → ${_format(view.to!.currency, view.toBalance + (amounts?.get ?? 0))}',
-                onTap: () => controller.focus(ExchangeSide.get, amounts),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              _MoneyCard(
+                side: ExchangeSide.give,
+                currency: view.giveCurrency,
+                amount: amounts?.give ?? 0,
+                active: form.typed == ExchangeSide.give,
+                typed: form.digits,
+                method: view.from,
+                balanceText: _balanceText(view.from, view.fromBalance),
+                // Red only once an amount is typed that is more than the
+                // method holds.
+                balanceShort:
+                    view.from != null &&
+                    (amounts?.give ?? 0) > 0 &&
+                    amounts!.give + form.fee > view.fromBalance,
+                onTap: () => controller.focus(ExchangeSide.give, amounts),
                 onCurrency: controller.swap,
                 onMethod: () => _pickMethod(
                   context,
-                  view.toMethods,
-                  view.to,
-                  controller.selectToMethod,
+                  view.fromMethods,
+                  view.from,
+                  controller.selectFromMethod,
                 ),
               ),
-            ),
-            Positioned(
-              top: 7 - 22,
-              left: 0,
-              right: 0,
-              child: Center(child: _SwapButton(onTap: controller.swap)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        _RateCard(
-          rate: view.rate,
-          custom: view.rateIsCustom,
-          manual: ref.watch(usdRateProvider)?.manual ?? false,
-          onEdit: () => _editRate(context, ref, view.rate),
-        ),
-        const SizedBox(height: 14),
-        ChipRow(
-          padding: EdgeInsets.zero,
-          children: [
-            AppChip(
-              label: DateText.shortDay(form.day, now: now),
-              leadingIcon: AppIcons.calendar,
-              onTap: () => _pickDay(context, ref, form.day, now),
-            ),
-            AppChip(
-              label: form.fee == 0
-                  ? 'Add fee'
-                  : 'Fee ${_format(view.giveCurrency, form.fee)}',
-              leadingIcon: AppIcons.plus,
-              selected: form.fee > 0,
-              onTap: () => _editFee(context, ref, view.giveCurrency, form.fee),
-            ),
-            AppChip(
-              label: form.note == null ? 'Add note' : _short(form.note!),
-              leadingIcon: AppIcons.pencil,
-              onTap: () async {
-                final note = await showNoteSheet(context, initial: form.note);
-                if (note != null) controller.setNote(note);
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppIcon(AppIcons.info, size: 14, color: c.textTertiary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Exchanges move money between your so’m and dollar '
-                  'balances. They don’t count as income or expenses.',
-                  style: AppText.small12Regular.copyWith(
-                    color: c.textTertiary,
-                    height: 1.45,
+              // The swap button sits on the gap between the two cards.
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: _MoneyCard(
+                      side: ExchangeSide.get,
+                      currency: view.getCurrency,
+                      amount: amounts?.get ?? 0,
+                      active: form.typed == ExchangeSide.get,
+                      typed: form.digits,
+                      method: view.to,
+                      balanceText: view.to == null
+                          ? null
+                          : 'Balance ${_format(view.to!.currency, view.toBalance)}'
+                                ' → ${_format(view.to!.currency, view.toBalance + (amounts?.get ?? 0))}',
+                      onTap: () => controller.focus(ExchangeSide.get, amounts),
+                      onCurrency: controller.swap,
+                      onMethod: () => _pickMethod(
+                        context,
+                        view.toMethods,
+                        view.to,
+                        controller.selectToMethod,
+                      ),
+                    ),
                   ),
+                  Positioned(
+                    top: 7 - 22,
+                    left: 0,
+                    right: 0,
+                    child: Center(child: _SwapButton(onTap: controller.swap)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _RateCard(
+                rate: view.rate,
+                custom: view.rateIsCustom,
+                manual: ref.watch(usdRateProvider)?.manual ?? false,
+                onEdit: () => _editRate(context, ref, view.rate),
+              ),
+              const SizedBox(height: 14),
+              ChipRow(
+                padding: EdgeInsets.zero,
+                children: [
+                  AppChip(
+                    label: DateText.shortDay(form.day, now: now),
+                    leadingIcon: AppIcons.calendar,
+                    onTap: () => _pickDay(context, ref, form.day, now),
+                  ),
+                  AppChip(
+                    label: form.fee == 0
+                        ? 'Add fee'
+                        : 'Fee ${_format(view.giveCurrency, form.fee)}',
+                    leadingIcon: AppIcons.plus,
+                    selected: form.fee > 0,
+                    onTap: () =>
+                        _editFee(context, ref, view.giveCurrency, form.fee),
+                  ),
+                  AppChip(
+                    label: form.note == null ? 'Add note' : _short(form.note!),
+                    leadingIcon: AppIcons.pencil,
+                    onTap: () async {
+                      final note = await showNoteSheet(
+                        context,
+                        initial: form.note,
+                      );
+                      if (note != null) controller.setNote(note);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppIcon(AppIcons.info, size: 14, color: c.textTertiary),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Exchanges move money between your so’m and dollar '
+                        'balances. They don’t count as income or expenses.',
+                        style: AppText.small12Regular.copyWith(
+                          color: c.textTertiary,
+                          height: 1.45,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-        const Spacer(),
         const SizedBox(height: 12),
-        NumberKeypad(onKey: controller.press, onClear: controller.clearAmount),
+        NumberKeypad(
+          onKey: controller.press,
+          onClear: controller.clearAmount,
+          // Dollars can have cents; so'm cannot.
+          decimal: form.currencyOf(form.typed) == Currency.usd,
+        ),
         const SizedBox(height: 12),
         PrimaryButton(
           label: editing != null && view.canSave
@@ -351,6 +370,7 @@ class _MoneyCard extends StatelessWidget {
     required this.currency,
     required this.amount,
     required this.active,
+    required this.typed,
     required this.method,
     required this.balanceText,
     required this.onTap,
@@ -365,6 +385,10 @@ class _MoneyCard extends StatelessWidget {
   /// In the smallest unit of [currency].
   final int amount;
   final bool active;
+
+  /// What the keypad typed, like "100.5". Shown as it is on the active
+  /// dollar card, so a "." or a trailing zero does not disappear.
+  final String typed;
   final PaymentMethodRow? method;
   final String? balanceText;
 
@@ -382,10 +406,8 @@ class _MoneyCard extends StatelessWidget {
     if (currency == Currency.uzs) {
       text = MoneyFormat.amount(amount);
     } else {
-      // Typed dollars are whole; worked-out dollars show cents.
-      text = active
-          ? MoneyFormat.dollarsShort(amount)
-          : MoneyFormat.dollars(amount);
+      // Typed dollars show as typed; worked-out dollars show cents.
+      text = active ? _typedDollars(typed) : MoneyFormat.dollars(amount);
     }
     final color = amount == 0
         ? c.textTertiary
@@ -500,6 +522,14 @@ class _MoneyCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "100.5" → "$100.5", "1000." → "$1 000.", "" → "$0".
+String _typedDollars(String typed) {
+  if (typed.isEmpty) return r'$0';
+  final [whole, ...rest] = typed.split('.');
+  final grouped = MoneyFormat.amount(whole.isEmpty ? 0 : int.parse(whole));
+  return rest.isEmpty ? '\$$grouped' : '\$$grouped.${rest.first}';
 }
 
 /// "S UZS so'm ⌄" pill. Tapping it swaps buy and sell.

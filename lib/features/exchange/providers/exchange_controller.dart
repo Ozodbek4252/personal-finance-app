@@ -27,7 +27,8 @@ class ExchangeFormState {
   /// The card the keypad types into. The other card is worked out.
   final ExchangeSide typed;
 
-  /// Keypad input in whole so'm or whole dollars, like "1265000".
+  /// Keypad input: whole so'm like "1265000", or dollars with cents
+  /// like "100.5".
   final String digits;
 
   /// Null means "use the default method" (see [ExchangeView]).
@@ -44,7 +45,10 @@ class ExchangeFormState {
   final DateTime day;
   final String? note;
 
-  int get whole => AmountInput.toAmount(digits);
+  /// The typed amount in the smallest unit of its currency.
+  int get typedMinor => currencyOf(typed) == Currency.usd
+      ? AmountInput.toCents(digits)
+      : AmountInput.toAmount(digits);
 
   Currency currencyOf(ExchangeSide side) =>
       ExchangeMath.currencyOf(side, selling: selling);
@@ -94,9 +98,12 @@ class ExchangeController extends Notifier<ExchangeFormState> {
   ExchangeFormState build() {
     final editing = _args.editing;
     if (editing == null) {
+      // Start on the dollar card: people think "buy $34.12", and only
+      // that card has the "." key for cents.
       return ExchangeFormState(
         selling: _args.selling,
         day: ref.read(clockProvider).now(),
+        typed: _args.selling ? ExchangeSide.give : ExchangeSide.get,
       );
     }
     // Start from the saved exchange. The so'm side is typed, because it
@@ -116,8 +123,11 @@ class ExchangeController extends Notifier<ExchangeFormState> {
     );
   }
 
-  void press(KeypadKey key) =>
-      state = state.copyWith(digits: AmountInput.press(state.digits, key));
+  void press(KeypadKey key) => state = state.copyWith(
+    digits: state.currencyOf(state.typed) == Currency.usd
+        ? AmountInput.pressDecimal(state.digits, key)
+        : AmountInput.press(state.digits, key),
+  );
 
   void clearAmount() => state = state.copyWith(digits: '');
 
@@ -130,8 +140,12 @@ class ExchangeController extends Notifier<ExchangeFormState> {
       ExchangeSide.give => shown?.give ?? 0,
       ExchangeSide.get => shown?.get ?? 0,
     };
-    final whole = (minor / currency.minorUnits).round();
-    state = state.copyWith(typed: side, digits: whole == 0 ? '' : '$whole');
+    state = state.copyWith(
+      typed: side,
+      digits: currency == Currency.usd
+          ? AmountInput.fromCents(minor)
+          : (minor == 0 ? '' : '$minor'),
+    );
   }
 
   /// Buy ↔ sell. The typed amount stays with its currency, and the two
@@ -318,7 +332,7 @@ final exchangeViewProvider = Provider.autoDispose
             : ExchangeMath.amounts(
                 selling: form.selling,
                 typed: form.typed,
-                whole: form.whole,
+                typedMinor: form.typedMinor,
                 rate: rate,
               ),
         from: from,

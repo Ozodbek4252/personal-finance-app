@@ -23,7 +23,7 @@ void main() {
       ExchangeMath.amounts(
         selling: false,
         typed: ExchangeSide.give,
-        whole: 1265000,
+        typedMinor: 1265000,
         rate: 12650,
       ),
       (give: 1265000, get: 10000),
@@ -33,7 +33,7 @@ void main() {
       ExchangeMath.amounts(
         selling: false,
         typed: ExchangeSide.give,
-        whole: 1000000,
+        typedMinor: 1000000,
         rate: 12650,
       ).get,
       7905,
@@ -45,7 +45,7 @@ void main() {
       ExchangeMath.amounts(
         selling: false,
         typed: ExchangeSide.get,
-        whole: 100,
+        typedMinor: 10000,
         rate: 11778.45,
       ),
       (give: 1177845, get: 10000),
@@ -54,7 +54,7 @@ void main() {
       ExchangeMath.amounts(
         selling: true,
         typed: ExchangeSide.give,
-        whole: 40,
+        typedMinor: 4000,
         rate: 12600,
       ),
       (give: 4000, get: 504000),

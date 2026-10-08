@@ -27,6 +27,19 @@ Future<void> _type(WidgetTester tester, List<String> keys) async {
 
 Future<void> _tapText(WidgetTester tester, String text) async {
   final f = find.textContaining(text);
+  if (f.evaluate().isEmpty) {
+    // Not built yet: scroll the form's card list down to it.
+    await tester.scrollUntilVisible(
+      f,
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+  }
   await tester.ensureVisible(f);
   await tester.pumpAndSettle();
   await tester.tap(f);
@@ -65,6 +78,9 @@ void main() {
 
     final before = await _rows(tester, db);
     final usdBefore = await _balances(tester, db, Currency.usd);
+    // It opens on the dollar card; type so'm on the other one.
+    await tester.tap(find.bySemanticsLabel(RegExp('^You give, UZS')));
+    await tester.pump();
     await _type(tester, ['1', '2', '6', '5', '000']);
     expect(find.text('1 265 000'), findsOneWidget);
     expect(find.text(r'$100.00'), findsOneWidget);
@@ -101,6 +117,8 @@ void main() {
     sampleData: true,
     (tester, db) async {
       await _open(tester, Routes.buyDollars);
+      await tester.tap(find.bySemanticsLabel(RegExp('^You give, UZS')));
+      await tester.pump();
       await _type(tester, ['5', '0', '6', '000']);
       // The typed so'm move to "You get"; dollars are now given.
       await tester.tap(find.bySemanticsLabel('Swap direction'));
@@ -159,5 +177,35 @@ void main() {
     await tester.tap(find.text('Expense'));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel(RegExp(r'^Amount 7\sUZS')), findsOneWidget);
+  });
+
+  testApp('dollars take cents with the “.” key', sampleData: true, (
+    tester,
+    db,
+  ) async {
+    await _open(tester, Routes.buyDollars);
+    // It opens on the dollar card, so "." is there right away.
+    expect(find.bySemanticsLabel('Decimal point'), findsOneWidget);
+    expect(find.bySemanticsLabel('000'), findsNothing);
+
+    // The so'm card types whole so'm: "000" instead of ".".
+    await tester.tap(find.bySemanticsLabel(RegExp('^You give, UZS')));
+    await tester.pump();
+    expect(find.bySemanticsLabel('Decimal point'), findsNothing);
+    expect(find.bySemanticsLabel('000'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel(RegExp('^You get, USD')));
+    await tester.pump();
+    expect(find.bySemanticsLabel('000'), findsNothing);
+    await _type(tester, ['1', '0', '0', 'Decimal point', '5']);
+    expect(find.text(r'$100.5'), findsOneWidget);
+    await _type(tester, ['0']);
+    expect(find.text(r'$100.50'), findsOneWidget);
+    // $100.50 at 12 650 = 1 271 325 UZS.
+    expect(find.text('1\u00A0271\u00A0325'), findsOneWidget);
+
+    await _tapText(tester, 'Convert');
+    final saved = (await _rows(tester, db)).first;
+    expect((saved.fromAmount, saved.toAmount), (1271325, 10050));
   });
 }

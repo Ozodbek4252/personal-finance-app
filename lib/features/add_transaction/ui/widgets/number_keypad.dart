@@ -11,10 +11,18 @@ import '../../domain/amount_input.dart';
 /// 3 × 4 number pad with a "000" key and a delete key.
 /// Holding the delete key clears the whole amount.
 class NumberKeypad extends StatelessWidget {
-  const NumberKeypad({super.key, required this.onKey, required this.onClear});
+  const NumberKeypad({
+    super.key,
+    required this.onKey,
+    required this.onClear,
+    this.decimal = false,
+  });
 
   final ValueChanged<KeypadKey> onKey;
   final VoidCallback onClear;
+
+  /// Show a "." key instead of "000", for amounts with cents.
+  final bool decimal;
 
   static const _rows = [
     ['1', '2', '3'],
@@ -34,7 +42,13 @@ class NumberKeypad extends StatelessWidget {
               for (final (i, label) in row.indexed) ...[
                 if (i > 0) const SizedBox(width: 8),
                 Expanded(
-                  child: label == null
+                  child: label == '000' && decimal
+                      ? _Key(
+                          semanticLabel: 'Decimal point',
+                          onTap: () => onKey(const DecimalKey()),
+                          child: Text('.', style: AppText.keypad22),
+                        )
+                      : label == null
                       ? _Key(
                           semanticLabel: 'Delete digit',
                           onTap: () => onKey(const BackspaceKey()),

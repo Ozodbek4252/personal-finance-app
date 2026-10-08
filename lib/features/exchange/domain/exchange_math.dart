@@ -17,17 +17,16 @@ abstract final class ExchangeMath {
     return isGive == givesSom ? Currency.uzs : Currency.usd;
   }
 
-  /// [whole] is what was typed on the [typed] card, in whole so'm or
-  /// whole dollars. The other card is worked out with [rate] (UZS for
-  /// 1 USD) and rounded to the nearest so'm or cent.
+  /// [typedMinor] is what was typed on the [typed] card, in so'm or
+  /// cents. The other card is worked out with [rate] (UZS for 1 USD)
+  /// and rounded to the nearest so'm or cent.
   static ExchangeAmounts amounts({
     required bool selling,
     required ExchangeSide typed,
-    required int whole,
+    required int typedMinor,
     required double rate,
   }) {
     final typedCurrency = currencyOf(typed, selling: selling);
-    final typedMinor = whole * typedCurrency.minorUnits;
     final otherMinor = typedCurrency == Currency.uzs
         ? (typedMinor * 100 / rate).round()
         : (typedMinor * rate / 100).round();
