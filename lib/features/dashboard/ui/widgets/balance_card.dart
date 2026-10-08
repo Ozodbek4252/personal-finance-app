@@ -99,7 +99,12 @@ class BalanceCard extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 16),
-          _DollarRow(cents: cents, inSom: dollarsInSom, hidden: hidden),
+          _DollarRow(
+            cents: cents,
+            inSom: dollarsInSom,
+            hidden: hidden,
+            onTap: () => context.push(Routes.dollars),
+          ),
           if (cents != 0 && dollarsInSom != null && summary != null) ...[
             const SizedBox(height: 16),
             Text(
@@ -125,11 +130,15 @@ class _DollarRow extends StatelessWidget {
     required this.cents,
     required this.inSom,
     required this.hidden,
+    required this.onTap,
   });
 
   final int cents;
   final int? inSom;
   final bool hidden;
+
+  /// Opens the Dollar balance page.
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -137,54 +146,68 @@ class _DollarRow extends StatelessWidget {
         ? '\$${BalanceCard._dots}'
         : MoneyFormat.dollars(cents);
     final som = inSom;
+    final radius = BorderRadius.circular(14);
     return Semantics(
       container: true,
+      button: true,
       label: hidden ? 'Dollar balance hidden' : 'Dollar balance $dollars',
       excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: BalanceCard._row,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                color: BalanceCard._badge,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                r'$',
-                style: AppText.caption13Strong.copyWith(color: Colors.white),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                dollars,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.body16Strong.copyWith(color: Colors.white),
-              ),
-            ),
-            if (som != null && cents != 0) ...[
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  '≈ ${hidden ? BalanceCard._dots : MoneyFormat.withCurrency(som)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.small12Regular.copyWith(
-                    color: BalanceCard._unit,
+      child: Material(
+        color: BalanceCard._row,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: BalanceCard._badge,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    r'$',
+                    style: AppText.caption13Strong.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ],
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    dollars,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body16Strong.copyWith(color: Colors.white),
+                  ),
+                ),
+                if (som != null && cents != 0) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      '≈ ${hidden ? BalanceCard._dots : MoneyFormat.withCurrency(som)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.small12Regular.copyWith(
+                        color: BalanceCard._unit,
+                      ),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                const AppIcon(
+                  AppIcons.chevronRight,
+                  size: 18,
+                  color: BalanceCard._unit,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

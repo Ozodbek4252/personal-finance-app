@@ -104,6 +104,47 @@ void main() {
     });
   });
 
+  group('fillHistory', () {
+    late AppDatabase db;
+    late FakeRateSource source;
+    late _Clock clock;
+    late ExchangeRateRepository rates;
+    late RateService service;
+
+    setUp(() {
+      db = memoryDb();
+      source = FakeRateSource();
+      clock = _Clock(); // 6 October 2026
+      rates = ExchangeRateRepository(db);
+      service = RateService(source, rates, SettingsRepository(db), clock);
+    });
+    tearDown(() => db.close());
+
+    test('fetches the last day of each past month with no rate', () async {
+      await rates.save(Currency.usd, DateTime(2026, 7, 10), 12480);
+      await service.fillHistory();
+      expect(source.days, [
+        DateTime(2026, 5, 31),
+        DateTime(2026, 6, 30),
+        DateTime(2026, 8, 31),
+        DateTime(2026, 9, 30),
+      ]);
+      final saved = await rates.getSince(Currency.usd, DateTime(2026));
+      expect(saved, hasLength(5));
+
+      // Nothing is missing now, so a second run fetches nothing.
+      source.days.clear();
+      await service.fillHistory();
+      expect(source.days, isEmpty);
+    });
+
+    test('offline it stops quietly', () async {
+      source.offline = true;
+      await service.fillHistory();
+      expect(await rates.getSince(Currency.usd, DateTime(2026)), isEmpty);
+    });
+  });
+
   test('UsdRate turns so\'m into cents', () {
     const rate = UsdRate(value: 12650, manual: false);
     expect(rate.toCents(1265000), 10000);

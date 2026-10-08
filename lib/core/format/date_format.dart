@@ -33,6 +33,9 @@ abstract final class DateText {
   /// "Wed, 30 Sep 2026 · 13:40" (transaction details).
   static String detail(DateTime d) => '${_detail.format(d)} · ${time(d)}';
 
+  /// "30 Sep".
+  static String dayMonth(DateTime d) => _dayMonth.format(d);
+
   /// "19 Sep, 23:10" (search results).
   static String dayMonthTime(DateTime d) =>
       '${_dayMonth.format(d)}, ${time(d)}';

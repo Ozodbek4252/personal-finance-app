@@ -23,6 +23,9 @@ class LineChart extends StatelessWidget {
     this.average,
     this.height = 170,
     this.semanticLabel,
+    this.tickFormat,
+    this.labelWidth = 30,
+    this.showArea = true,
   });
 
   final List<LinePoint> points;
@@ -34,6 +37,15 @@ class LineChart extends StatelessWidget {
   final int? average;
   final double height;
   final String? semanticLabel;
+
+  /// Text of the grid line values. Defaults to short money ("5M").
+  final String Function(double value)? tickFormat;
+
+  /// Room on the left for the grid line values.
+  final double labelWidth;
+
+  /// Soft filled area under the line.
+  final bool showArea;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +66,9 @@ class LineChart extends StatelessWidget {
             label: c.textTertiary,
             strongLabel: c.textPrimary,
             dotFill: c.surface,
+            tickFormat: tickFormat ?? (v) => MoneyFormat.compact(v.round()),
+            left: labelWidth,
+            showArea: showArea,
           ),
         ),
       ),
@@ -71,6 +86,9 @@ class _LinePainter extends CustomPainter {
     required this.label,
     required this.strongLabel,
     required this.dotFill,
+    required this.tickFormat,
+    required this.left,
+    required this.showArea,
   });
 
   final List<LinePoint> points;
@@ -81,8 +99,10 @@ class _LinePainter extends CustomPainter {
   final Color label;
   final Color strongLabel;
   final Color dotFill;
+  final String Function(double value) tickFormat;
+  final double left;
+  final bool showArea;
 
-  static const _left = 30.0;
   static const _inset = 6.0;
   static const _top = 14.0;
 
@@ -105,10 +125,10 @@ class _LinePainter extends CustomPainter {
       ..color = grid
       ..strokeWidth = 1;
     for (final t in ticks) {
-      canvas.drawLine(Offset(_left, y(t)), Offset(size.width, y(t)), gridPaint);
+      canvas.drawLine(Offset(left, y(t)), Offset(size.width, y(t)), gridPaint);
       paintLabel(
         canvas,
-        MoneyFormat.compact(t.round()),
+        tickFormat(t),
         Offset(0, y(t)),
         axisStyle(label),
         center: false,
@@ -118,7 +138,7 @@ class _LinePainter extends CustomPainter {
     if (average case final avg?) {
       paintDashedLine(
         canvas,
-        Offset(_left, y(avg.toDouble())),
+        Offset(left, y(avg.toDouble())),
         size.width,
         Paint()
           ..color = label
@@ -128,10 +148,10 @@ class _LinePainter extends CustomPainter {
 
     final step = points.length <= 1
         ? 0.0
-        : (size.width - _left - 2 * _inset) / (points.length - 1);
+        : (size.width - left - 2 * _inset) / (points.length - 1);
     final offsets = [
       for (final (i, p) in points.indexed)
-        Offset(_left + _inset + i * step, y(p.value.toDouble())),
+        Offset(left + _inset + i * step, y(p.value.toDouble())),
     ];
 
     final line = Path()..addPolygon(offsets, false);
@@ -143,7 +163,9 @@ class _LinePainter extends CustomPainter {
     area
       ..lineTo(offsets.last.dx, fillBottom)
       ..close();
-    canvas.drawPath(area, Paint()..color = color.withValues(alpha: 0.08));
+    if (showArea) {
+      canvas.drawPath(area, Paint()..color = color.withValues(alpha: 0.08));
+    }
     canvas.drawPath(
       line,
       Paint()

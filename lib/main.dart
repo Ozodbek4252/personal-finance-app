@@ -23,8 +23,9 @@ Future<void> main() async {
   );
 
   // Get today's USD rate in the background, now and each time the app
-  // comes back to the front. Without internet the last saved rate stays.
+  // comes back to the front, and fill in missing months for the rate
+  // chart. Without internet the last saved rates stay.
   final rates = container.read(rateServiceProvider);
-  unawaited(rates.refreshIfStale());
+  unawaited(rates.refreshIfStale().then((_) => rates.fillHistory()));
   AppLifecycleListener(onResume: () => unawaited(rates.refreshIfStale()));
 }

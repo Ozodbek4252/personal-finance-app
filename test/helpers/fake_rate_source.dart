@@ -8,10 +8,15 @@ class FakeRateSource implements RateSource {
   bool offline = false;
   int calls = 0;
 
+  /// The days asked for, in order. Null means "today".
+  final days = <DateTime?>[];
+
   @override
   Future<OfficialRate> usd({DateTime? day}) async {
     calls++;
     if (offline) throw const RateUnavailableException('offline');
-    return next;
+    days.add(day);
+    // A past day gets the same rate, dated that day.
+    return day == null ? next : OfficialRate(day: day, rate: next.rate);
   }
 }

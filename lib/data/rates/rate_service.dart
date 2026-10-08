@@ -59,4 +59,29 @@ class RateService {
       // No internet or a server problem. The last saved rate is used.
     }
   }
+
+  /// How many months the rate chart shows, this month included.
+  static const historyMonths = 6;
+
+  /// Makes sure there is a saved rate in each of the last
+  /// [historyMonths] months, for the rate chart and "this month"
+  /// changes. Fetches the rate of the last day of each month that has
+  /// none. This month comes from [refresh]. Never throws.
+  Future<void> fillHistory() async {
+    try {
+      final now = _clock.now();
+      final first = DateTime(now.year, now.month - (historyMonths - 1));
+      final saved = await _rates.getSince(Currency.usd, first);
+      final have = {for (final r in saved) (r.day.year, r.day.month)};
+      for (var i = 0; i < historyMonths - 1; i++) {
+        final month = DateTime(first.year, first.month + i);
+        if (have.contains((month.year, month.month))) continue;
+        final lastDay = DateTime(month.year, month.month + 1, 0);
+        final rate = await _source.usd(day: lastDay);
+        await _rates.save(Currency.usd, rate.day, rate.rate);
+      }
+    } on Object {
+      // No internet. The chart shows the months it has.
+    }
+  }
 }

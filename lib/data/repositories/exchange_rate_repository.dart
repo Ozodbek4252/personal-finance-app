@@ -54,4 +54,15 @@ class ExchangeRateRepository {
       ..orderBy([(r) => OrderingTerm.asc(r.day)]);
     return query.watch();
   }
+
+  /// Like [watchSince], but reads once.
+  Future<List<ExchangeRateRow>> getSince(Currency currency, DateTime from) {
+    final query = _db.select(_db.exchangeRates)
+      ..where(
+        (r) =>
+            r.currency.equalsValue(currency) & r.day.isBiggerOrEqualValue(from),
+      )
+      ..orderBy([(r) => OrderingTerm.asc(r.day)]);
+    return query.get();
+  }
 }

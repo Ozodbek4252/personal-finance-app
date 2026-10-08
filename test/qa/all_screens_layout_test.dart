@@ -40,6 +40,7 @@ void main() {
     ('New category', Routes.newCategory),
     ('Payment methods', Routes.paymentMethods),
     ('Currencies', Routes.currencies),
+    ('Dollar balance', Routes.dollars),
   ];
 
   for (final setup in setups) {

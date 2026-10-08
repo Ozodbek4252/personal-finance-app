@@ -20,6 +20,7 @@ class ExchangeTile extends StatelessWidget {
     this.onTap,
     this.showDivider = false,
     this.highlight = '',
+    this.subtitle,
   });
 
   final ExchangeDetails item;
@@ -27,6 +28,9 @@ class ExchangeTile extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showDivider;
   final String highlight;
+
+  /// Replaces the "note · time" line, like "30 Sep · rate 12 650".
+  final String? subtitle;
 
   /// "+$100.00" or "+506 000 UZS". With [signed] off there is no "+".
   static String gotText(ExchangeDetails e, {bool signed = true}) {
@@ -84,7 +88,7 @@ class ExchangeTile extends StatelessWidget {
                     Text('Exchange', style: AppText.body15Strong),
                     const SizedBox(height: 2),
                     HighlightedText(
-                      '${note ?? route} · $timeText',
+                      subtitle ?? '${note ?? route} · $timeText',
                       query: note == null ? '' : highlight,
                       style: AppText.caption13Regular.copyWith(
                         color: c.textSecondary,

@@ -5,6 +5,7 @@ import '../../../core/time/clock.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/currency.dart';
 import '../../../data/providers/data_providers.dart';
+import '../../../data/rates/rate_service.dart';
 import '../domain/dollar_stats.dart';
 
 /// Dollars held now and what they cost.
@@ -26,4 +27,13 @@ final monthStartRateProvider = StreamProvider<ExchangeRateRow?>((ref) {
   return ref
       .watch(exchangeRateRepositoryProvider)
       .watchLatestBefore(Currency.usd, start);
+});
+
+/// Saved CBU rates of the last months, for the rate chart.
+final rateHistoryProvider = StreamProvider<List<ExchangeRateRow>>((ref) {
+  final now = ref.watch(clockProvider).now();
+  final first = DateTime(now.year, now.month - (RateService.historyMonths - 1));
+  return ref
+      .watch(exchangeRateRepositoryProvider)
+      .watchSince(Currency.usd, first);
 });

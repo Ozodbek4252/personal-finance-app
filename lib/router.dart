@@ -9,6 +9,7 @@ import 'features/categories/ui/categories_page.dart';
 import 'features/categories/ui/category_form_page.dart';
 import 'features/currencies/ui/currencies_page.dart';
 import 'features/dashboard/ui/dashboard_page.dart';
+import 'features/dollars/ui/dollar_balance_page.dart';
 import 'features/edit_transaction/ui/edit_transaction_page.dart';
 import 'features/exchange/ui/edit_exchange_page.dart';
 import 'features/exchange/ui/exchange_detail_page.dart';
@@ -39,6 +40,7 @@ abstract final class Routes {
   static const categories = '/categories';
   static const paymentMethods = '/payment-methods';
   static const currencies = '/currencies';
+  static const dollars = '/dollars';
   static const newCategory = '/categories/new';
   static String editCategory(int id) => '/categories/$id/edit';
   static String transactionDetail(int id) => '/transaction/$id';
@@ -147,6 +149,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.paymentMethods,
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const PaymentMethodsPage(),
+      ),
+      GoRoute(
+        path: Routes.dollars,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DollarBalancePage(),
       ),
       GoRoute(
         path: Routes.currencies,
