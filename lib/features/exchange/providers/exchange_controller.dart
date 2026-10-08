@@ -72,26 +72,49 @@ class ExchangeFormState {
   );
 }
 
-/// State of the open Exchange screen. The family argument is true when
-/// it opens to sell dollars.
+/// Which Exchange screen is open: a new exchange (buying, or selling
+/// when [selling] is true), or an edit of [editing].
+typedef ExchangeFormArgs = ({bool selling, ExchangeDetails? editing});
+
+/// State of the open Exchange screen.
 final exchangeFormProvider = NotifierProvider.autoDispose
-    .family<ExchangeController, ExchangeFormState, bool>(
+    .family<ExchangeController, ExchangeFormState, ExchangeFormArgs>(
       ExchangeController.new,
     );
 
 class ExchangeController extends Notifier<ExchangeFormState> {
-  ExchangeController(this._startSelling);
+  ExchangeController(this._args);
 
-  final bool _startSelling;
+  final ExchangeFormArgs _args;
 
   /// True while a save is running, so a double tap saves only once.
   bool _saving = false;
 
   @override
-  ExchangeFormState build() => ExchangeFormState(
-    selling: _startSelling,
-    day: ref.read(clockProvider).now(),
-  );
+  ExchangeFormState build() {
+    final editing = _args.editing;
+    if (editing == null) {
+      return ExchangeFormState(
+        selling: _args.selling,
+        day: ref.read(clockProvider).now(),
+      );
+    }
+    // Start from the saved exchange. The so'm side is typed, because it
+    // has no cents, so the dollars come out the same at the saved rate.
+    final x = editing.exchange;
+    final selling = editing.fromCurrency == Currency.usd;
+    return ExchangeFormState(
+      selling: selling,
+      day: x.occurredAt,
+      typed: selling ? ExchangeSide.get : ExchangeSide.give,
+      digits: '${selling ? x.toAmount : x.fromAmount}',
+      fromMethodId: x.fromMethodId,
+      toMethodId: x.toMethodId,
+      rate: x.rate,
+      fee: x.fee,
+      note: x.note,
+    );
+  }
 
   void press(KeypadKey key) =>
       state = state.copyWith(digits: AmountInput.press(state.digits, key));
@@ -151,30 +174,32 @@ class ExchangeController extends Notifier<ExchangeFormState> {
     }
     _saving = true;
 
-    // Use the chosen day with the current time of day.
-    final now = ref.read(clockProvider).now();
+    // Use the chosen day with the current time of day. An edit keeps
+    // the time it was saved with.
+    final editing = _args.editing;
+    final time = editing?.occurredAt ?? ref.read(clockProvider).now();
     final day = state.day;
+    final repo = ref.read(exchangeRepositoryProvider);
     try {
-      return await ref
-          .read(exchangeRepositoryProvider)
-          .add(
-            ExchangeDraft(
-              fromMethodId: from.id,
-              fromAmount: amounts.give,
-              toMethodId: to.id,
-              toAmount: amounts.get,
-              rate: rate,
-              fee: state.fee,
-              occurredAt: DateTime(
-                day.year,
-                day.month,
-                day.day,
-                now.hour,
-                now.minute,
-              ),
-              note: state.note,
-            ),
-          );
+      final draft = ExchangeDraft(
+        fromMethodId: from.id,
+        fromAmount: amounts.give,
+        toMethodId: to.id,
+        toAmount: amounts.get,
+        rate: rate,
+        fee: state.fee,
+        occurredAt: DateTime(
+          day.year,
+          day.month,
+          day.day,
+          time.hour,
+          time.minute,
+        ),
+        note: state.note,
+      );
+      if (editing == null) return await repo.add(draft);
+      await repo.update(editing.id, draft);
+      return editing.id;
     } finally {
       _saving = false;
     }
@@ -229,61 +254,78 @@ class ExchangeView {
       to != null;
 }
 
-final exchangeViewProvider = Provider.autoDispose.family<ExchangeView, bool>((
-  ref,
-  startSelling,
-) {
-  final form = ref.watch(exchangeFormProvider(startSelling));
-  final todayRate = ref.watch(usdRateProvider)?.value;
-  final rate = form.rate ?? todayRate;
-  final som = ref.watch(paymentMethodsProvider).value ?? const [];
-  final usd = ref.watch(dollarMethodsProvider).value ?? const [];
-  final somBalances =
-      ref.watch(balancesProvider(Currency.uzs)).value ?? const {};
-  final usdBalances =
-      ref.watch(balancesProvider(Currency.usd)).value ?? const {};
-  final defaultSomId = ref
-      .watch(currentSettingsProvider)
-      .defaultPaymentMethodId;
+final exchangeViewProvider = Provider.autoDispose
+    .family<ExchangeView, ExchangeFormArgs>((ref, args) {
+      final form = ref.watch(exchangeFormProvider(args));
+      final todayRate = ref.watch(usdRateProvider)?.value;
+      final rate = form.rate ?? todayRate;
+      final som = ref.watch(paymentMethodsProvider).value ?? const [];
+      final usd = ref.watch(dollarMethodsProvider).value ?? const [];
+      final somBalances =
+          ref.watch(balancesProvider(Currency.uzs)).value ?? const {};
+      final usdBalances =
+          ref.watch(balancesProvider(Currency.usd)).value ?? const {};
+      final defaultSomId = ref
+          .watch(currentSettingsProvider)
+          .defaultPaymentMethodId;
 
-  PaymentMethodRow? pick(
-    List<PaymentMethodRow> list,
-    int? chosen,
-    int? fallback,
-  ) =>
-      list.where((m) => m.id == chosen).firstOrNull ??
-      list.where((m) => m.id == fallback).firstOrNull ??
-      list.firstOrNull;
+      PaymentMethodRow? pick(
+        List<PaymentMethodRow> list,
+        int? chosen,
+        int? fallback,
+      ) =>
+          list.where((m) => m.id == chosen).firstOrNull ??
+          list.where((m) => m.id == fallback).firstOrNull ??
+          list.firstOrNull;
 
-  final fromList = form.selling ? usd : som;
-  final toList = form.selling ? som : usd;
-  final from = pick(
-    fromList,
-    form.fromMethodId,
-    form.selling ? null : defaultSomId,
-  );
-  final to = pick(toList, form.toMethodId, form.selling ? defaultSomId : null);
-  int balanceOf(PaymentMethodRow? m) => m == null
-      ? 0
-      : ((m.currency == Currency.uzs ? somBalances : usdBalances)[m.id] ?? 0);
+      final fromList = form.selling ? usd : som;
+      final toList = form.selling ? som : usd;
+      final from = pick(
+        fromList,
+        form.fromMethodId,
+        form.selling ? null : defaultSomId,
+      );
+      final to = pick(
+        toList,
+        form.toMethodId,
+        form.selling ? defaultSomId : null,
+      );
+      // When editing, balances already include this exchange. Take it out,
+      // so "before → after" shows the change once.
+      final editing = args.editing?.exchange;
+      int saved(PaymentMethodRow? m) {
+        if (editing == null || m == null) return 0;
+        var effect = 0;
+        if (m.id == editing.fromMethodId) {
+          effect -= editing.fromAmount + editing.fee;
+        }
+        if (m.id == editing.toMethodId) effect += editing.toAmount;
+        return effect;
+      }
 
-  return ExchangeView(
-    form: form,
-    rate: rate,
-    rateIsCustom: form.rate != null,
-    amounts: rate == null
-        ? null
-        : ExchangeMath.amounts(
-            selling: form.selling,
-            typed: form.typed,
-            whole: form.whole,
-            rate: rate,
-          ),
-    from: from,
-    to: to,
-    fromMethods: fromList,
-    toMethods: toList,
-    fromBalance: balanceOf(from),
-    toBalance: balanceOf(to),
-  );
-});
+      int balanceOf(PaymentMethodRow? m) {
+        if (m == null) return 0;
+        final balances = m.currency == Currency.uzs ? somBalances : usdBalances;
+        return (balances[m.id] ?? 0) - saved(m);
+      }
+
+      return ExchangeView(
+        form: form,
+        rate: rate,
+        rateIsCustom: form.rate != null,
+        amounts: rate == null
+            ? null
+            : ExchangeMath.amounts(
+                selling: form.selling,
+                typed: form.typed,
+                whole: form.whole,
+                rate: rate,
+              ),
+        from: from,
+        to: to,
+        fromMethods: fromList,
+        toMethods: toList,
+        fromBalance: balanceOf(from),
+        toBalance: balanceOf(to),
+      );
+    });

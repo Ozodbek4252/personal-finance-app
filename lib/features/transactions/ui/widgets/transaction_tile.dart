@@ -20,6 +20,7 @@ class TransactionTile extends StatelessWidget {
     this.onTap,
     this.showDivider = false,
     this.highlight = '',
+    this.usdText,
   });
 
   final TransactionDetails item;
@@ -33,6 +34,9 @@ class TransactionTile extends StatelessWidget {
 
   /// Search text to highlight in the note.
   final String highlight;
+
+  /// "≈ $33", shown before the payment method. Null hides it.
+  final String? usdText;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +100,9 @@ class TransactionTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    item.paymentMethod.name,
+                    usdText == null
+                        ? item.paymentMethod.name
+                        : '$usdText · ${item.paymentMethod.name}',
                     style: AppText.small12Regular.copyWith(
                       color: c.textTertiary,
                     ),

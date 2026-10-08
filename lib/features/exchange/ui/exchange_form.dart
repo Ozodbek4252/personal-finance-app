@@ -18,6 +18,7 @@ import '../../../core/widgets/text_input_dialog.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/currency.dart';
 import '../../../data/models/display_style.dart';
+import '../../../data/models/exchange_details.dart';
 import '../../../data/providers/data_providers.dart';
 import '../../../router.dart';
 import '../../add_transaction/ui/widgets/note_sheet.dart';
@@ -30,16 +31,21 @@ import '../providers/exchange_controller.dart';
 /// Exchanges only move money between balances. They are not income or
 /// expenses.
 class ExchangeForm extends ConsumerWidget {
-  const ExchangeForm({super.key, this.startSelling = false});
+  const ExchangeForm({super.key, this.startSelling = false, this.editing});
 
   /// Open in "sell dollars" mode instead of "buy dollars".
   final bool startSelling;
 
+  /// A saved exchange to change. Null adds a new one.
+  final ExchangeDetails? editing;
+
+  ExchangeFormArgs get _args => (selling: startSelling, editing: editing);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final view = ref.watch(exchangeViewProvider(startSelling));
-    final controller = ref.read(exchangeFormProvider(startSelling).notifier);
+    final view = ref.watch(exchangeViewProvider(_args));
+    final controller = ref.read(exchangeFormProvider(_args).notifier);
     final form = view.form;
     final now = ref.watch(clockProvider).now();
     final amounts = view.amounts;
@@ -163,7 +169,9 @@ class ExchangeForm extends ConsumerWidget {
         NumberKeypad(onKey: controller.press, onClear: controller.clearAmount),
         const SizedBox(height: 12),
         PrimaryButton(
-          label: _saveLabel(view),
+          label: editing != null && view.canSave
+              ? 'Save changes'
+              : _saveLabel(view),
           onPressed: view.canSave ? () => _save(context, ref, view) : null,
         ),
       ],
@@ -207,13 +215,17 @@ class ExchangeForm extends ConsumerWidget {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final repo = ref.read(exchangeRepositoryProvider);
-    final id = await ref
-        .read(exchangeFormProvider(startSelling).notifier)
-        .save(view);
+    final id = await ref.read(exchangeFormProvider(_args).notifier).save(view);
     if (id == null || !context.mounted) return;
 
     context.pop();
     final a = view.amounts!;
+    if (editing != null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('Exchange updated')));
+      return;
+    }
     messenger.showSnackBar(
       SnackBar(
         content: Text(
@@ -275,7 +287,7 @@ class ExchangeForm extends ConsumerWidget {
     );
     final rate = text == null ? null : RateInput.parse(text);
     if (rate != null) {
-      ref.read(exchangeFormProvider(startSelling).notifier).setRate(rate);
+      ref.read(exchangeFormProvider(_args).notifier).setRate(rate);
     }
   }
 
@@ -309,7 +321,7 @@ class ExchangeForm extends ConsumerWidget {
     if (text == null) return;
     final value = RateInput.parse(text) ?? 0;
     ref
-        .read(exchangeFormProvider(startSelling).notifier)
+        .read(exchangeFormProvider(_args).notifier)
         .setFee((value * currency.minorUnits).round());
   }
 
@@ -326,7 +338,7 @@ class ExchangeForm extends ConsumerWidget {
       lastDate: now,
     );
     if (picked != null) {
-      ref.read(exchangeFormProvider(startSelling).notifier).selectDay(picked);
+      ref.read(exchangeFormProvider(_args).notifier).selectDay(picked);
     }
   }
 }

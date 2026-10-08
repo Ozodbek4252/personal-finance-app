@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/date_format.dart';
+import '../../../core/format/money_format.dart';
 import '../../../core/icons/app_icons.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_chip.dart';
@@ -13,13 +14,14 @@ import '../../../core/widgets/page_title.dart';
 import '../../../core/widgets/search_field.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/display_style.dart';
-import '../../../data/models/transaction_details.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
 import '../../../router.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
+import '../domain/list_entry.dart';
 import '../domain/transaction_filter.dart';
 import '../providers/transactions_providers.dart';
+import 'widgets/exchange_tile.dart';
 import 'widgets/filter_sheet.dart';
 import 'widgets/transaction_list_parts.dart';
 import 'widgets/transaction_tile.dart';
@@ -137,6 +139,7 @@ class TransactionsPage extends ConsumerWidget {
       for (final t in TypeFilter.values)
         AppChip(
           label: t.label,
+          leadingIcon: t == TypeFilter.exchanges ? AppIcons.exchange : null,
           selected: filter.type == t,
           onTap: () => notifier.setType(t),
         ),
@@ -217,8 +220,11 @@ class TransactionsPage extends ConsumerWidget {
   ) {
     const side = EdgeInsets.symmetric(horizontal: 16);
     final notifier = ref.read(transactionFilterProvider.notifier);
-    void open(TransactionDetails t) =>
-        context.push(Routes.transactionDetail(t.id));
+    void open(ListEntry e) => context.push(switch (e) {
+      TransactionEntry() => Routes.transactionDetail(e.id),
+      ExchangeEntry() => Routes.exchangeDetail(e.id),
+    });
+    final usd = _usdText(ref);
     SliverPadding padded(Widget child) => SliverPadding(
       padding: side,
       sliver: SliverToBoxAdapter(child: child),
@@ -252,6 +258,7 @@ class TransactionsPage extends ConsumerWidget {
             highlight: filter.query,
             timeText: (t) => DateText.dayMonthTime(t.occurredAt),
             onTap: open,
+            usdText: usd,
           ),
         ),
         padded(
@@ -307,6 +314,7 @@ class TransactionsPage extends ConsumerWidget {
             items: view.items,
             timeText: (t) => DateText.dayMonthTime(t.occurredAt),
             onTap: open,
+            usdText: usd,
           ),
         ),
       ];
@@ -330,6 +338,7 @@ class TransactionsPage extends ConsumerWidget {
                   items: days[i].items,
                   timeText: (t) => DateText.time(t.occurredAt),
                   onTap: open,
+                  usdText: usd,
                 ),
               ],
             ),
@@ -337,6 +346,15 @@ class TransactionsPage extends ConsumerWidget {
         ),
       ),
     ];
+  }
+
+  /// "≈ $33" for a so'm amount when "Show USD in transaction list" is on.
+  static String? Function(int som)? _usdText(WidgetRef ref) {
+    final settings = ref.watch(currentSettingsProvider);
+    final rate = ref.watch(usdRateProvider);
+    if (!settings.showUsdInList || rate == null) return null;
+    return (som) =>
+        '≈ ${MoneyFormat.dollars(rate.toCents(som.abs()), round: settings.roundDollars)}';
   }
 
   Future<void> _pickSort(BuildContext context, WidgetRef ref) async {
@@ -375,13 +393,9 @@ class TransactionsPage extends ConsumerWidget {
 
   Future<void> _pickCategory(BuildContext context, WidgetRef ref) async {
     final filter = ref.read(transactionFilterProvider);
-    final kinds = switch (filter.type) {
-      TypeFilter.expenses => [TransactionKind.expense],
-      TypeFilter.income => [TransactionKind.income],
-      TypeFilter.all => TransactionKind.values,
-    };
     final categories = <CategoryRow>[
-      for (final k in kinds) ...?ref.read(categoriesProvider(k)).value,
+      for (final k in filter.type.kinds)
+        ...?ref.read(categoriesProvider(k)).value,
     ];
     final picked = await showOptionSheet<int>(
       context,
@@ -419,6 +433,7 @@ String noResultsMessage(TransactionFilter filter, Map<int, String> names) {
     switch (filter.type) {
       TypeFilter.income => 'in income',
       TypeFilter.expenses => 'in expenses',
+      TypeFilter.exchanges => 'in exchanges',
       TypeFilter.all => '',
     },
     switch (filter.categoryIds.length) {
@@ -435,19 +450,24 @@ String noResultsMessage(TransactionFilter filter, Map<int, String> names) {
             'Try another word or remove a filter.';
 }
 
-/// White card with transaction rows and thin lines between them.
+/// White card with transaction and exchange rows and thin lines
+/// between them.
 class _TileCard extends StatelessWidget {
   const _TileCard({
     required this.items,
     required this.timeText,
     required this.onTap,
     this.highlight = '',
+    this.usdText,
   });
 
-  final List<TransactionDetails> items;
-  final String Function(TransactionDetails) timeText;
-  final void Function(TransactionDetails) onTap;
+  final List<ListEntry> items;
+  final String Function(ListEntry) timeText;
+  final void Function(ListEntry) onTap;
   final String highlight;
+
+  /// Adds "≈ $" to transaction rows. Null shows no dollars.
+  final String? Function(int som)? usdText;
 
   @override
   Widget build(BuildContext context) {
@@ -455,14 +475,24 @@ class _TileCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
-          for (final (i, t) in items.indexed)
-            TransactionTile(
-              item: t,
-              showDivider: i > 0,
-              timeText: timeText(t),
-              highlight: highlight,
-              onTap: () => onTap(t),
-            ),
+          for (final (i, e) in items.indexed)
+            switch (e) {
+              TransactionEntry(:final item) => TransactionTile(
+                item: item,
+                showDivider: i > 0,
+                timeText: timeText(e),
+                highlight: highlight,
+                usdText: usdText?.call(item.transaction.amount),
+                onTap: () => onTap(e),
+              ),
+              ExchangeEntry(:final item) => ExchangeTile(
+                item: item,
+                showDivider: i > 0,
+                timeText: timeText(e),
+                highlight: highlight,
+                onTap: () => onTap(e),
+              ),
+            },
         ],
       ),
     );

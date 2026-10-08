@@ -1,12 +1,15 @@
 import '../../../core/time/clock.dart';
+import '../../../data/models/exchange_details.dart';
 import '../../../data/models/transaction_details.dart';
 import '../../../data/models/transaction_kind.dart';
+import 'list_entry.dart';
 
-/// "All", "Expenses" or "Income".
+/// "All", "Expenses", "Income" or "Exchanges".
 enum TypeFilter {
   all('All'),
   expenses('Expenses'),
-  income('Income');
+  income('Income'),
+  exchanges('Exchanges');
 
   const TypeFilter(this.label);
   final String label;
@@ -15,6 +18,17 @@ enum TypeFilter {
     all => true,
     expenses => kind == TransactionKind.expense,
     income => kind == TransactionKind.income,
+    exchanges => false,
+  };
+
+  bool get acceptsExchanges => this == all || this == exchanges;
+
+  /// Categories that can be picked with this type.
+  List<TransactionKind> get kinds => switch (this) {
+    all => TransactionKind.values,
+    expenses => const [TransactionKind.expense],
+    income => const [TransactionKind.income],
+    exchanges => const [],
   };
 }
 
@@ -106,6 +120,37 @@ class TransactionFilter {
     return matchesQuery(t, query);
   }
 
+  /// True if exchange [e] passes the filters. Exchanges have no
+  /// category, so a category filter hides them.
+  bool matchesExchange(ExchangeDetails e) {
+    if (!type.acceptsExchanges || categoryIds.isNotEmpty) return false;
+    return matchesExchangeQuery(e, query);
+  }
+
+  /// Search looks at the note, the two methods, the word "exchange",
+  /// the currency codes and both amounts ("1265000" or "100").
+  static bool matchesExchangeQuery(ExchangeDetails e, String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final row = e.exchange;
+    final text = [
+      'exchange',
+      row.note,
+      e.from.name,
+      e.to.name,
+      '${e.fromCurrency.code} ${e.toCurrency.code}',
+    ].whereType<String>().join(' ').toLowerCase();
+    if (text.contains(q)) return true;
+    final digits = q.replaceAll(RegExp(r'[\s $]'), '');
+    if (!RegExp(r'^\d+$').hasMatch(digits)) return false;
+    // Dollar amounts are searched in whole dollars.
+    String whole(int minor, int units) => '${minor ~/ units}';
+    return [
+      whole(row.fromAmount, e.fromCurrency.minorUnits),
+      whole(row.toAmount, e.toCurrency.minorUnits),
+    ].any((a) => a.contains(digits));
+  }
+
   /// Search looks at the note, description, category, payment method
   /// and amount. "taxi" finds "Taxi · Yandex Go"; "35000" or "35 000"
   /// finds 35 000.
@@ -132,10 +177,10 @@ class DayGroup {
 
   /// Midnight of the day.
   final DateTime day;
-  final List<TransactionDetails> items;
+  final List<ListEntry> items;
 
-  /// Income − expenses on this day.
-  int get net => items.fold(0, (sum, t) => sum + t.signedAmount);
+  /// Income − expenses on this day. Exchanges do not count.
+  int get net => items.fold(0, (sum, e) => sum + e.signedSom);
 }
 
 /// The filtered list, ready to show.
@@ -147,28 +192,35 @@ class TransactionListView {
     required this.sort,
   });
 
-  /// Builds the view from the transactions of the filter's period.
+  /// Builds the view from the transactions and exchanges of the
+  /// filter's period.
   factory TransactionListView.build(
     List<TransactionDetails> periodItems,
-    TransactionFilter filter,
-  ) {
-    final items = periodItems.where(filter.matches).toList();
+    TransactionFilter filter, {
+    List<ExchangeDetails> exchanges = const [],
+  }) {
+    final transactions = periodItems.where(filter.matches).toList();
+    final items = <ListEntry>[
+      for (final t in transactions) TransactionEntry(t),
+      for (final e in exchanges)
+        if (filter.matchesExchange(e)) ExchangeEntry(e),
+    ];
+    int newestFirst(ListEntry a, ListEntry b) {
+      final byDate = b.occurredAt.compareTo(a.occurredAt);
+      return byDate != 0 ? byDate : b.id.compareTo(a.id);
+    }
+
     switch (filter.sort) {
       case SortOrder.newest:
-        break; // The database already returns newest first.
+        items.sort(newestFirst);
       case SortOrder.oldest:
-        items.sort((a, b) {
-          final byDate = a.occurredAt.compareTo(b.occurredAt);
-          return byDate != 0 ? byDate : a.id.compareTo(b.id);
-        });
+        items.sort((a, b) => newestFirst(b, a));
       case SortOrder.largest:
-        items.sort(
-          (a, b) => b.transaction.amount.compareTo(a.transaction.amount),
-        );
+        items.sort((a, b) => b.somAmount.compareTo(a.somAmount));
     }
     var income = 0;
     var expense = 0;
-    for (final t in items) {
+    for (final t in transactions) {
       if (t.kind == TransactionKind.income) {
         income += t.transaction.amount;
       } else {
@@ -183,7 +235,7 @@ class TransactionListView {
     );
   }
 
-  final List<TransactionDetails> items;
+  final List<ListEntry> items;
   final int income;
   final int expense;
   final SortOrder sort;

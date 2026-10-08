@@ -19,7 +19,7 @@ void main() {
     expect(find.text('+15 500 000'), findsOneWidget);
     expect(find.text('−3 050 000'), findsOneWidget);
     expect(find.text('+12 450 000'), findsOneWidget);
-    expect(find.text('41 transactions'), findsOneWidget);
+    expect(find.text('43 transactions'), findsOneWidget);
     expect(find.text('TODAY · 30 SEP'), findsOneWidget);
     expect(find.text('+14 545 000'), findsOneWidget);
     expect(find.text('Korzinka · 13:40'), findsOneWidget);
@@ -41,7 +41,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Clear search'));
     await tester.pumpAndSettle();
-    expect(find.text('41 transactions'), findsOneWidget);
+    expect(find.text('43 transactions'), findsOneWidget);
   });
 
   testApp('type chips become removable filters', sampleData: true, (
@@ -55,7 +55,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Remove filter Income'));
     await tester.pumpAndSettle();
-    expect(find.text('41 transactions'), findsOneWidget);
+    expect(find.text('43 transactions'), findsOneWidget);
   });
 
   testApp('sort by largest shows a flat list', sampleData: true, (
@@ -76,13 +76,16 @@ void main() {
     db,
   ) async {
     await _openTab(tester);
+    // The chip row scrolls sideways; the period chip may start off screen.
+    await tester.ensureVisible(find.text('September'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('September'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('All time'));
     await tester.pumpAndSettle();
     expect(find.text('All time'), findsOneWidget);
     expect(find.textContaining(' transactions'), findsOneWidget);
-    expect(find.text('41 transactions'), findsNothing);
+    expect(find.text('43 transactions'), findsNothing);
   });
 
   testApp('category chip filters one category', sampleData: true, (
@@ -145,7 +148,7 @@ void main() {
     await _openTab(tester);
     await tester.tap(find.bySemanticsLabel('Filters'));
     await tester.pumpAndSettle();
-    expect(find.text('Show 41 results'), findsOneWidget);
+    expect(find.text('Show 43 results'), findsOneWidget);
 
     final sheet = find.byType(BottomSheet);
     await tester.tap(
@@ -188,7 +191,7 @@ void main() {
       3000,
     );
     await tester.pumpAndSettle();
-    expect(find.text('41 transactions'), findsOneWidget);
+    expect(find.text('43 transactions'), findsOneWidget);
   });
 
   testApp('filter sheet date presets', sampleData: true, (tester, db) async {

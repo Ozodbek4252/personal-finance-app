@@ -155,10 +155,7 @@ void main() {
     await tester.pumpAndSettle();
     await _type(tester, ['000']);
     // 35 000 000 UZS → $2 766.80.
-    expect(
-      find.text('≈ \$2 766.80 · 1 USD = 12 650 UZS'),
-      findsOneWidget,
-    );
+    expect(find.text('≈ \$2 766.80 · 1 USD = 12 650 UZS'), findsOneWidget);
   });
 
   testApp('without a rate there is no dollar line', (tester, db) async {

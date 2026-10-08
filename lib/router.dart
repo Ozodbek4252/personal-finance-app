@@ -10,6 +10,8 @@ import 'features/categories/ui/category_form_page.dart';
 import 'features/currencies/ui/currencies_page.dart';
 import 'features/dashboard/ui/dashboard_page.dart';
 import 'features/edit_transaction/ui/edit_transaction_page.dart';
+import 'features/exchange/ui/edit_exchange_page.dart';
+import 'features/exchange/ui/exchange_detail_page.dart';
 import 'features/monthly_overview/ui/monthly_overview_page.dart';
 import 'features/payment_methods/ui/payment_methods_page.dart';
 import 'features/settings/ui/settings_page.dart';
@@ -41,6 +43,8 @@ abstract final class Routes {
   static String editCategory(int id) => '/categories/$id/edit';
   static String transactionDetail(int id) => '/transaction/$id';
   static String editTransaction(int id) => '/transaction/$id/edit';
+  static String exchangeDetail(int id) => '/exchange/$id';
+  static String editExchange(int id) => '/exchange/$id/edit';
 
   static const designPreview = '/dev/preview';
 }
@@ -88,6 +92,25 @@ final routerProvider = Provider<GoRouter>((ref) {
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => EditTransactionPage(
               id: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/exchange/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => ExchangeDetailPage(
+          id: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
+        ),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            parentNavigatorKey: _rootNavigatorKey,
+            pageBuilder: (context, state) => MaterialPage(
+              fullscreenDialog: true,
+              child: EditExchangePage(
+                id: int.tryParse(state.pathParameters['id'] ?? '') ?? -1,
+              ),
             ),
           ),
         ],

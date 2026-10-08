@@ -134,6 +134,11 @@ final exchangesProvider = StreamProvider<List<ExchangeDetails>>(
   (ref) => ref.watch(exchangeRepositoryProvider).watchAll(),
 );
 
+/// One exchange, or null when it does not exist.
+final exchangeProvider = StreamProvider.family<ExchangeDetails?, int>(
+  (ref, id) => ref.watch(exchangeRepositoryProvider).watchById(id),
+);
+
 /// The newest saved official rate for a currency, or null.
 final latestRateProvider = StreamProvider.family<ExchangeRateRow?, Currency>(
   (ref, currency) =>

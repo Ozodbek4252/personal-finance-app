@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/async/combine.dart';
+import '../../../data/models/exchange_details.dart';
 import '../../../data/models/transaction_details.dart';
 import '../../../data/providers/data_providers.dart';
 import '../domain/transaction_filter.dart';
@@ -43,12 +45,28 @@ final periodTransactionsProvider =
           .watchBetween(range.from, range.to),
     );
 
-/// The filtered, sorted list with its totals.
-final transactionListProvider = Provider<AsyncValue<TransactionListView>>((
-  ref,
-) {
-  final filter = ref.watch(transactionFilterProvider);
-  return ref
-      .watch(periodTransactionsProvider(filter.period ?? allTimeRange))
-      .whenData((items) => TransactionListView.build(items, filter));
-});
+/// Exchanges in a date range, newest first.
+final periodExchangesProvider =
+    StreamProvider.family<List<ExchangeDetails>, DateRange>(
+      (ref, range) => ref
+          .watch(exchangeRepositoryProvider)
+          .watchBetween(range.from, range.to),
+    );
+
+/// The filtered, sorted list for [filter], with its totals.
+final filteredListProvider = Provider.autoDispose
+    .family<AsyncValue<TransactionListView>, TransactionFilter>((ref, filter) {
+      final range = filter.period ?? allTimeRange;
+      return combine2(
+        ref.watch(periodTransactionsProvider(range)),
+        ref.watch(periodExchangesProvider(range)),
+      ).whenData(
+        (v) => TransactionListView.build(v.$1, filter, exchanges: v.$2),
+      );
+    });
+
+/// The list for the filters on the Transactions tab.
+final transactionListProvider = Provider<AsyncValue<TransactionListView>>(
+  (ref) =>
+      ref.watch(filteredListProvider(ref.watch(transactionFilterProvider))),
+);
