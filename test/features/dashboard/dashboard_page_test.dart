@@ -91,4 +91,58 @@ void main() {
     expect(find.text('Transaction'), findsOneWidget);
     expect(find.bySemanticsLabel('Back'), findsOneWidget);
   });
+
+  group('dollars on Home', () {
+    testApp('balance card shows dollars, total and rate', sampleData: true, (
+      tester,
+      db,
+    ) async {
+      expect(find.text('So’m balance'), findsOneWidget);
+      expect(find.bySemanticsLabel('Dollar balance \$500.00'), findsOneWidget);
+      expect(find.textContaining('All together ≈'), findsOneWidget);
+      expect(find.text('1 USD = 12 650 UZS'), findsOneWidget);
+      expect(find.text('≈ \$1 225'), findsOneWidget);
+      expect(find.text('≈ \$241'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Convert so’m and dollars'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AddTransactionPage), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('^You get, USD')), findsOneWidget);
+    });
+
+    testApp('the rate insight matches the design', sampleData: true, (
+      tester,
+      db,
+    ) async {
+      await _scrollTo(tester, find.textContaining('The dollar rate rose'));
+      expect(
+        find.textContaining('Your \$500 is now worth 54 000 UZS more'),
+        findsOneWidget,
+      );
+    });
+
+    testApp('“Show USD on home” off hides the ≈ \$ lines', sampleData: true, (
+      tester,
+      db,
+    ) async {
+      await tester.runAsync(
+        () => SettingsRepository(db).setShowUsdOnHome(false),
+      );
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(find.text('≈ \$1 225'), findsNothing);
+      expect(find.bySemanticsLabel('Dollar balance \$500.00'), findsOneWidget);
+    });
+
+    testApp('hiding the balance hides the dollars too', sampleData: true, (
+      tester,
+      db,
+    ) async {
+      await tester.tap(find.bySemanticsLabel('Hide balance'));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Dollar balance hidden'), findsOneWidget);
+      expect(find.textContaining('6 325 000'), findsNothing);
+    });
+  });
 }

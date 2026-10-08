@@ -140,4 +140,30 @@ void main() {
     // Picked from the full list, it now shows in the grid as selected.
     expect(find.bySemanticsLabel('Entertainment'), findsOneWidget);
   });
+
+  testApp('shows the amount in dollars at today’s rate', sampleData: true, (
+    tester,
+    db,
+  ) async {
+    await _openAdd(tester);
+    expect(find.text('1 USD = 12 650 UZS'), findsOneWidget);
+
+    await _type(tester, ['3', '5', '000']);
+    expect(find.text('≈ \$2.77 · 1 USD = 12 650 UZS'), findsOneWidget);
+
+    await tester.tap(find.text('Income'));
+    await tester.pumpAndSettle();
+    await _type(tester, ['000']);
+    // 35 000 000 UZS → $2 766.80.
+    expect(
+      find.text('≈ \$2 766.80 · 1 USD = 12 650 UZS'),
+      findsOneWidget,
+    );
+  });
+
+  testApp('without a rate there is no dollar line', (tester, db) async {
+    await _openAdd(tester);
+    await _type(tester, ['5']);
+    expect(find.textContaining('1 USD ='), findsNothing);
+  });
 }

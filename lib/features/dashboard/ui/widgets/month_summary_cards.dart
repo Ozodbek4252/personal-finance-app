@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/format/date_format.dart';
 import '../../../../core/format/money_format.dart';
@@ -11,17 +12,24 @@ import '../../../../core/widgets/app_icon.dart';
 import '../../../../core/widgets/category_icon_tile.dart';
 import '../../../../core/widgets/pill.dart';
 import '../../../../core/widgets/progress_bar.dart';
+import '../../../../data/providers/data_providers.dart';
 import '../../domain/dashboard_data.dart';
 
-/// The Income and Expenses cards side by side.
-class IncomeExpenseCards extends StatelessWidget {
+/// The Income and Expenses cards side by side. With "Show USD on home"
+/// on, each one also shows the amount in dollars at today's rate.
+class IncomeExpenseCards extends ConsumerWidget {
   const IncomeExpenseCards({super.key, required this.data});
 
   final DashboardData data;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final settings = ref.watch(currentSettingsProvider);
+    final rate = ref.watch(usdRateProvider);
+    String? inDollars(int som) => !settings.showUsdOnHome || rate == null
+        ? null
+        : '≈ ${MoneyFormat.dollars(rate.toCents(som), round: settings.roundDollars)}';
     final prevMonth = data.previous == null
         ? null
         : DateText.monthShort(data.previous!.month);
@@ -33,6 +41,7 @@ class IncomeExpenseCards extends StatelessWidget {
             child: _StatCard(
               label: 'Income',
               amount: data.current.income,
+              inDollars: inDollars(data.current.income),
               change: data.incomeChange,
               compareTo: prevMonth,
               icon: AppIcons.arrowDownLeft,
@@ -45,6 +54,7 @@ class IncomeExpenseCards extends StatelessWidget {
             child: _StatCard(
               label: 'Expenses',
               amount: data.current.expense,
+              inDollars: inDollars(data.current.expense),
               change: data.expenseChange,
               compareTo: prevMonth,
               icon: AppIcons.arrowUpRight,
@@ -62,6 +72,7 @@ class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.label,
     required this.amount,
+    required this.inDollars,
     required this.change,
     required this.compareTo,
     required this.icon,
@@ -71,6 +82,9 @@ class _StatCard extends StatelessWidget {
 
   final String label;
   final int amount;
+
+  /// "≈ $1 225", or null to show no dollars.
+  final String? inDollars;
   final double? change;
   final String? compareTo;
   final AppIconData icon;
@@ -108,6 +122,15 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 12),
           AmountText(amount, style: AppText.title21, showUnit: false),
           const SizedBox(height: 4),
+          if (inDollars != null) ...[
+            Text(
+              inDollars!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption13.copyWith(color: c.textSecondary),
+            ),
+            const SizedBox(height: 4),
+          ],
           if (change == null || compareTo == null)
             Text(
               'UZS this month',

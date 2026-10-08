@@ -20,6 +20,7 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(dashboardProvider);
+    final rateInsight = ref.watch(dollarRateInsightProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -37,7 +38,7 @@ class DashboardPage extends ConsumerWidget {
               ),
               sliver: SliverList.list(
                 children: switch (data) {
-                  AsyncData(:final value) => _sections(value),
+                  AsyncData(:final value) => _sections(value, rateInsight),
                   AsyncError(:final error) => [_ErrorCard(error: error)],
                   _ => const [BalanceCard()],
                 },
@@ -49,8 +50,9 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  List<Widget> _sections(DashboardData data) {
+  List<Widget> _sections(DashboardData data, Insight? rateInsight) {
     const gap = SizedBox(height: 16);
+    final insights = [...data.insights, ?rateInsight];
     if (!data.hasAnyTransactions) {
       return [
         const BalanceCard(),
@@ -72,10 +74,7 @@ class DashboardPage extends ConsumerWidget {
       ],
       gap,
       SpendingTrendSection(data: data),
-      if (data.insights.isNotEmpty) ...[
-        gap,
-        InsightsSection(insights: data.insights),
-      ],
+      if (insights.isNotEmpty) ...[gap, InsightsSection(insights: insights)],
       gap,
       const RecentSection(),
     ];

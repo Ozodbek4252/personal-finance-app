@@ -30,12 +30,21 @@ typedef InsightSpan = ({String text, bool bold});
 /// A short sentence about the month, like
 /// "**Groceries** are your largest expense category…".
 class Insight {
-  const Insight({required this.icon, required this.spans, this.color});
+  const Insight({
+    required this.icon,
+    required this.spans,
+    this.color,
+    this.accent = false,
+  });
 
   final AppIconData icon;
 
-  /// Category color of the icon tile. Null means the savings style.
+  /// Category color of the icon tile. Null means the savings style,
+  /// or the accent style when [accent] is true.
   final CategoryColor? color;
+
+  /// Indigo tile, used for dollar insights.
+  final bool accent;
   final List<InsightSpan> spans;
 
   String get plainText => spans.map((s) => s.text).join();

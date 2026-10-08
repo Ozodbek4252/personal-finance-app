@@ -15,11 +15,15 @@ class AmountDisplay extends StatelessWidget {
     required this.amount,
     required this.kind,
     required this.onCurrencyTap,
+    this.usdLine,
   });
 
   final int amount;
   final TransactionKind kind;
   final VoidCallback onCurrencyTap;
+
+  /// "≈ $2.77 · 1 USD = 12 650 UZS" under the amount. Null hides it.
+  final String? usdLine;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +71,14 @@ class AmountDisplay extends StatelessWidget {
               ],
             ),
           ),
+          if (usdLine != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              usdLine!,
+              textAlign: TextAlign.center,
+              style: AppText.label14.copyWith(color: c.textSecondary),
+            ),
+          ],
           const SizedBox(height: 10),
           Semantics(
             container: true,

@@ -55,6 +55,7 @@ abstract final class AppText {
   /// Bottom nav labels.
   static final tiny11Strong = _style(11, FontWeight.w600, 0);
   static final tiny11 = _style(11, FontWeight.w500, 0);
+  static final tiny11Regular = _style(11, FontWeight.w400, 0);
 
   /// [letterSpacingEm] is in "em", like the CSS in the design.
   static TextStyle _style(

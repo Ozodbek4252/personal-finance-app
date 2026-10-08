@@ -307,10 +307,14 @@ class InsightsSection extends StatelessWidget {
       height: 32,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: c.savingsSoft,
+        color: insight.accent ? c.accentSoft : c.savingsSoft,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: AppIcon(insight.icon, size: 17, color: c.savings),
+      child: AppIcon(
+        insight.icon,
+        size: 17,
+        color: insight.accent ? c.accent : c.savings,
+      ),
     );
   }
 }

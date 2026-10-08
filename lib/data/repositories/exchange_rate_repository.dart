@@ -32,6 +32,18 @@ class ExchangeRateRepository {
     return query.watchSingleOrNull();
   }
 
+  /// The newest saved rate for a day before [day], or null. Used to see
+  /// how the rate changed since a month started.
+  Stream<ExchangeRateRow?> watchLatestBefore(Currency currency, DateTime day) {
+    final query = _db.select(_db.exchangeRates)
+      ..where(
+        (r) => r.currency.equalsValue(currency) & r.day.isSmallerThanValue(day),
+      )
+      ..orderBy([(r) => OrderingTerm.desc(r.day)])
+      ..limit(1);
+    return query.watchSingleOrNull();
+  }
+
   /// Saved rates from [from] on, oldest first. Used for the rate chart.
   Stream<List<ExchangeRateRow>> watchSince(Currency currency, DateTime from) {
     final query = _db.select(_db.exchangeRates)

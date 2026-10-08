@@ -17,6 +17,7 @@ import '../../../data/db/app_database.dart';
 import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
+import '../../../data/rates/rate_service.dart';
 import '../../../router.dart';
 import '../../exchange/ui/exchange_form.dart';
 import '../../receipts/receipt_widgets.dart';
@@ -134,13 +135,18 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   ) {
     final c = context.colors;
     final isIncome = state.kind == TransactionKind.income;
+    final rate = ref.watch(usdRateProvider);
     return [
       const SizedBox(height: 4),
       AmountDisplay(
         amount: state.amount,
         kind: state.kind,
-        onCurrencyTap: () =>
-            _showMessage(context, 'Only UZS is supported for now.'),
+        usdLine: _usdLine(state.amount, rate),
+        onCurrencyTap: () => _showMessage(
+          context,
+          'Expenses and income are in so’m. Use Exchange to buy or sell '
+          'dollars.',
+        ),
       ),
       const SizedBox(height: 12),
       _QuickChips(
@@ -187,6 +193,15 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
         onPressed: state.canSave ? () => _save(context, ref) : null,
       ),
     ];
+  }
+
+  /// "≈ $2.77 · 1 USD = 12 650 UZS", or just the rate before an amount
+  /// is typed. Null without a rate.
+  static String? _usdLine(int amount, UsdRate? rate) {
+    if (rate == null) return null;
+    final rateText = '1 USD = ${MoneyFormat.rate(rate.value)} UZS';
+    if (amount == 0) return rateText;
+    return '≈ ${MoneyFormat.dollars(rate.toCents(amount))} · $rateText';
   }
 
   static String _saveLabel(AddTransactionState s) {

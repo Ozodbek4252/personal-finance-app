@@ -5,6 +5,8 @@ import '../../../core/time/clock.dart';
 import '../../../data/models/currency.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/providers/data_providers.dart';
+import '../../dollars/domain/rate_insight.dart';
+import '../../dollars/providers/dollar_providers.dart';
 import '../domain/dashboard_data.dart';
 
 /// The month shown on the Dashboard. Starts at the current month.
@@ -82,4 +84,17 @@ final balanceSummaryProvider = Provider<AsyncValue<BalanceSummary>>((ref) {
       hidden: hidden,
     );
   });
+});
+
+/// The dollar rate insight, shown only for the current month.
+final dollarRateInsightProvider = Provider<Insight?>((ref) {
+  final month = ref.watch(selectedMonthProvider);
+  if (month != monthStart(ref.watch(clockProvider).now())) return null;
+  final stats = ref.watch(dollarStatsProvider).value;
+  if (stats == null) return null;
+  return dollarRateInsight(
+    monthStartRate: ref.watch(monthStartRateProvider).value?.rate,
+    rate: ref.watch(usdRateProvider)?.value,
+    stats: stats,
+  );
 });
