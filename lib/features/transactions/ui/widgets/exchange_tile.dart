@@ -38,10 +38,15 @@ class ExchangeTile extends StatelessWidget {
     return signed ? '+$text' : text;
   }
 
-  /// "−1 265 000 UZS" or "−$40.00", fee included.
+  /// "−1 265 000 UZS" or "−$40.00". A so'm fee is its own expense, so
+  /// only a dollar fee is added here.
   static String gaveText(ExchangeDetails e) =>
-      '${MoneyFormat.minus}'
-      '${amountText(e.fromCurrency, e.exchange.fromAmount + e.exchange.fee)}';
+      '${MoneyFormat.minus}${amountText(e.fromCurrency, gaveAmount(e))}';
+
+  /// What left the "from" method for the exchange itself.
+  static int gaveAmount(ExchangeDetails e) =>
+      e.exchange.fromAmount +
+      (e.fromCurrency == Currency.usd ? e.exchange.fee : 0);
 
   /// "$100.00" or "1 265 000 UZS".
   static String amountText(Currency currency, int minor) => switch (currency) {

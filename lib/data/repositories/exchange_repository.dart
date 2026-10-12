@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../core/time/clock.dart';
 import '../db/app_database.dart';
+import '../db/exchange_fees.dart';
 import '../models/exchange_details.dart';
 
 /// Reads and writes exchanges between so'm and dollar methods.
@@ -42,33 +43,42 @@ class ExchangeRepository {
     );
   }
 
-  /// Saves a new exchange and returns its id.
+  /// Saves a new exchange and returns its id. A so'm fee is also saved
+  /// as an expense.
   Future<int> add(ExchangeDraft draft) {
     final now = _clock.now();
-    return _db
-        .into(_db.exchanges)
-        .insert(
-          _companion(
-            draft,
-          ).copyWith(createdAt: Value(now), updatedAt: Value(now)),
-        );
+    return _db.transaction(() async {
+      final id = await _db
+          .into(_db.exchanges)
+          .insert(
+            _companion(
+              draft,
+            ).copyWith(createdAt: Value(now), updatedAt: Value(now)),
+          );
+      await syncFeeExpense(_db, id);
+      return id;
+    });
   }
 
-  Future<void> update(int id, ExchangeDraft draft) async {
+  Future<void> update(int id, ExchangeDraft draft) => _db.transaction(() async {
     await (_db.update(_db.exchanges)..where((e) => e.id.equals(id))).write(
       _companion(draft).copyWith(updatedAt: Value(_clock.now())),
     );
-  }
+    await syncFeeExpense(_db, id);
+  });
 
-  Future<void> delete(int id) async {
+  /// Deletes the exchange and its fee expense.
+  Future<void> delete(int id) => _db.transaction(() async {
+    await deleteFeeExpense(_db, id);
     await (_db.delete(_db.exchanges)..where((e) => e.id.equals(id))).go();
-  }
+  });
 
-  /// Puts a deleted exchange back exactly as it was (same id).
-  /// Used by "Undo" after a delete.
-  Future<void> restore(ExchangeRow row) async {
+  /// Puts a deleted exchange back exactly as it was (same id), with its
+  /// fee expense. Used by "Undo" after a delete.
+  Future<void> restore(ExchangeRow row) => _db.transaction(() async {
     await _db.into(_db.exchanges).insert(row, mode: InsertMode.insertOrReplace);
-  }
+    await syncFeeExpense(_db, row.id);
+  });
 
   JoinedSelectStatement<HasResultSet, dynamic> _joined() {
     final e = _db.exchanges;

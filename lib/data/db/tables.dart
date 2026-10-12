@@ -75,6 +75,11 @@ class Transactions extends Table {
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+
+  /// Set when this expense is the fee of an exchange. The exchange
+  /// keeps it in step: editing or deleting the exchange changes or
+  /// removes it. Added in schema 3.
+  IntColumn get exchangeId => integer().nullable().references(Exchanges, #id)();
 }
 
 /// Money moved from one payment method to another in a different

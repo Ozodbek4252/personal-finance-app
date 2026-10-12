@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../db/app_database.dart';
+import '../db/exchange_fees.dart';
 import '../repositories/settings_repository.dart';
 
 /// Thrown when a file is not a backup of this app.
@@ -26,7 +27,8 @@ class BackupService {
 
   /// 1: categories, methods, transactions, settings.
   /// 2: adds method currency, exchanges and exchange rates.
-  static const _version = 2;
+  /// 3: adds the exchange of a fee expense (transaction exchangeId).
+  static const _version = 3;
 
   Future<String> create() async {
     final data = {
@@ -108,20 +110,21 @@ class BackupService {
     }
 
     await _db.transaction(() async {
-      // Children first, because transactions and exchanges point to
-      // the other tables.
+      // Children first: fee expenses point to exchanges, and both
+      // point to the other tables.
+      await _db.delete(_db.transactions).go();
       await _db.delete(_db.exchanges).go();
       await _db.delete(_db.exchangeRates).go();
-      await _db.delete(_db.transactions).go();
       await _db.delete(_db.categories).go();
       await _db.delete(_db.paymentMethods).go();
       await _db.delete(_db.settings).go();
       await _db.batch((b) {
         b.insertAll(_db.categories, categories);
         b.insertAll(_db.paymentMethods, methods);
+        // Exchanges before transactions, which can point to them.
+        b.insertAll(_db.exchanges, exchanges);
         b.insertAll(_db.transactions, transactions);
         b.insertAll(_db.settings, settings);
-        b.insertAll(_db.exchanges, exchanges);
         b.insertAll(_db.exchangeRates, rates);
         // Never add sample data on top of restored data.
         b.insert(
@@ -130,6 +133,8 @@ class BackupService {
           mode: InsertMode.insertOrReplace,
         );
       });
+      // Older backups have fees only on the exchange.
+      await addMissingFeeExpenses(_db);
     });
   }
 }

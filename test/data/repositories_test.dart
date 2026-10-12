@@ -279,6 +279,66 @@ void main() {
       expect(usd, {cashUsd: 6000});
     });
 
+    test('a so’m fee is an expense that follows its exchange', () async {
+      Future<List<TransactionRow>> fees() => (db.select(
+        db.transactions,
+      )..where((t) => t.exchangeId.isNotNull())).get();
+
+      await methods.setOpeningBalance(humo, 5000000);
+      final id = await exchanges.add(buy(100, 12650, fee: 24900));
+      var list = await fees();
+      expect(list.single.amount, 24900);
+      expect(list.single.paymentMethodId, humo);
+      expect(list.single.exchangeId, id);
+      // No "Commission" in the defaults, so "Exchange fee" is made.
+      final category = await (db.select(
+        db.categories,
+      )..where((c) => c.id.equals(list.single.categoryId))).getSingle();
+      expect(category.name, 'Exchange fee');
+      // Counted once in the balance, and as spending this month.
+      expect(
+        (await transactions.getBalances())[humo],
+        5000000 - 1265000 - 24900,
+      );
+      expect(
+        (await transactions.watchMonthTotals().first).single.expense,
+        24900,
+      );
+
+      await exchanges.update(id, buy(100, 12650, fee: 10000));
+      list = await fees();
+      expect(list.single.amount, 10000);
+      await exchanges.update(id, buy(100, 12650));
+      expect(await fees(), isEmpty);
+
+      await exchanges.update(id, buy(100, 12650, fee: 5000));
+      final row = (await exchanges.getAll()).single.exchange;
+      await exchanges.delete(id);
+      expect(await fees(), isEmpty);
+      await exchanges.restore(row);
+      expect((await fees()).single.amount, 5000);
+    });
+
+    test('a dollar fee stays on the exchange', () async {
+      await exchanges.add(buy(100, 12650));
+      await exchanges.add(
+        ExchangeDraft(
+          fromMethodId: cashUsd,
+          fromAmount: 4000,
+          toMethodId: humo,
+          toAmount: 504000,
+          rate: 12600,
+          fee: 150,
+          occurredAt: DateTime(2026, 10, 1),
+        ),
+      );
+      expect(await transactions.watchCount().first, 0);
+      final usd = await transactions
+          .watchBalances(currency: Currency.usd)
+          .first;
+      expect(usd[cashUsd], 10000 - 4000 - 150);
+    });
+
     test('exchanges are not income or expenses', () async {
       await exchanges.add(buy(100, 12650));
       expect(await transactions.watchMonthTotals().first, isEmpty);

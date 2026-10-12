@@ -166,7 +166,8 @@ class ExchangeForm extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Exchanges move money between your so’m and dollar '
-                        'balances. They don’t count as income or expenses.',
+                        'balances. They don’t count as income or expenses, but a fee '
+                        'in so’m is saved as an expense.',
                         style: AppText.small12Regular.copyWith(
                           color: c.textTertiary,
                           height: 1.45,

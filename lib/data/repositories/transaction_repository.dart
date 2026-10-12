@@ -96,7 +96,11 @@ class TransactionRepository {
     ' + COALESCE((SELECT SUM('
     "CASE WHEN t.kind = 'income' THEN t.amount ELSE -t.amount END) "
     'FROM transactions t WHERE t.payment_method_id = pm.id), 0)'
-    ' - COALESCE((SELECT SUM(e.from_amount + e.fee) '
+    // A fee saved as an expense is already counted above, so it is
+    // taken only once.
+    ' - COALESCE((SELECT SUM(e.from_amount + CASE WHEN EXISTS '
+    '(SELECT 1 FROM transactions ft WHERE ft.exchange_id = e.id) '
+    'THEN 0 ELSE e.fee END) '
     'FROM exchanges e WHERE e.from_method_id = pm.id), 0)'
     ' + COALESCE((SELECT SUM(e.to_amount) '
     'FROM exchanges e WHERE e.to_method_id = pm.id), 0) AS balance '

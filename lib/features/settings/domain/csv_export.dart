@@ -63,11 +63,13 @@ String buildTransactionsCsv(
 }
 
 /// How much an exchange changed the [currency] balance: the "from" side
-/// (with its fee) goes out, the "to" side comes in.
+/// goes out, the "to" side comes in.
 int _change(ExchangeDetails e, Currency currency) {
   var change = 0;
   if (e.fromCurrency == currency) {
-    change -= e.exchange.fromAmount + e.exchange.fee;
+    // A so'm fee has its own expense row.
+    change -= e.exchange.fromAmount;
+    if (currency == Currency.usd) change -= e.exchange.fee;
   }
   if (e.toCurrency == currency) change += e.exchange.toAmount;
   return change;

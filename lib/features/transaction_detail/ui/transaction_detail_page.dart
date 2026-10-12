@@ -32,19 +32,23 @@ class TransactionDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final item = ref.watch(transactionProvider(id));
+    // A fee expense is changed through its exchange.
+    final feeOf = item.value?.transaction.exchangeId;
+    final editable = item.value != null && feeOf == null;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
             _Header(
+              showActions: feeOf == null,
               onBack: () => context.pop(),
-              onEdit: item.value == null
-                  ? null
-                  : () => context.push(Routes.editTransaction(id)),
-              onDelete: item.value == null
-                  ? null
-                  : () => _delete(context, ref, item.value!),
+              onEdit: editable
+                  ? () => context.push(Routes.editTransaction(id))
+                  : null,
+              onDelete: editable
+                  ? () => _delete(context, ref, item.value!)
+                  : null,
             ),
             Expanded(
               child: switch (item) {
@@ -114,8 +118,11 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.onEdit,
     required this.onDelete,
+    this.showActions = true,
   });
 
+  /// Edit and delete buttons. Hidden for a fee expense.
+  final bool showActions;
   final VoidCallback onBack;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -154,18 +161,20 @@ class _Header extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  CircleIconButton.raised(
-                    icon: AppIcons.pencil,
-                    semanticLabel: 'Edit transaction',
-                    onTap: onEdit,
-                  ),
-                  const SizedBox(width: 8),
-                  CircleIconButton.raised(
-                    icon: AppIcons.trash,
-                    color: context.colors.expense,
-                    semanticLabel: 'Delete transaction',
-                    onTap: onDelete,
-                  ),
+                  if (showActions) ...[
+                    CircleIconButton.raised(
+                      icon: AppIcons.pencil,
+                      semanticLabel: 'Edit transaction',
+                      onTap: onEdit,
+                    ),
+                    const SizedBox(width: 8),
+                    CircleIconButton.raised(
+                      icon: AppIcons.trash,
+                      color: context.colors.expense,
+                      semanticLabel: 'Delete transaction',
+                      onTap: onDelete,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -198,6 +207,10 @@ class _Body extends StatelessWidget {
       children: [
         _Hero(item: item),
         const SizedBox(height: 16),
+        if (row.exchangeId case final exchangeId?) ...[
+          _FeeOfExchange(exchangeId: exchangeId),
+          const SizedBox(height: 16),
+        ],
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Column(
@@ -236,32 +249,34 @@ class _Body extends StatelessWidget {
         ],
         const SizedBox(height: 16),
         _CategoryInsight(item: item),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: SecondaryButton(
-                label: 'Edit',
-                icon: AppIcons.pencil,
-                onPressed: onEdit,
+        if (row.exchangeId == null) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Edit',
+                  icon: AppIcons.pencil,
+                  onPressed: onEdit,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: SecondaryButton(
-                label: 'Duplicate',
-                icon: AppIcons.copy,
-                onPressed: onDuplicate,
+              const SizedBox(width: 10),
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Duplicate',
+                  icon: AppIcons.copy,
+                  onPressed: onDuplicate,
+                ),
               ),
-            ),
-          ],
-        ),
-        TextActionButton(
-          label: 'Delete transaction',
-          icon: AppIcons.trash,
-          color: c.expense,
-          onPressed: onDelete,
-        ),
+            ],
+          ),
+          TextActionButton(
+            label: 'Delete transaction',
+            icon: AppIcons.trash,
+            color: c.expense,
+            onPressed: onDelete,
+          ),
+        ],
       ],
     );
   }
@@ -466,6 +481,48 @@ class _CategoryInsight extends ConsumerWidget {
                 height: 1.45,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "This is the fee of an exchange" with a button to open it.
+class _FeeOfExchange extends StatelessWidget {
+  const _FeeOfExchange({required this.exchangeId});
+
+  final int exchangeId;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppIcon(AppIcons.exchange, color: c.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'This is the fee of an exchange. To change or delete it, '
+                  'edit the exchange.',
+                  style: AppText.label14Regular.copyWith(
+                    color: c.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Open exchange',
+            icon: AppIcons.exchange,
+            onPressed: () => context.push(Routes.exchangeDetail(exchangeId)),
           ),
         ],
       ),

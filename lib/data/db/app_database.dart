@@ -3,6 +3,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 import '../models/currency.dart';
 import '../models/transaction_kind.dart';
+import 'exchange_fees.dart';
 import 'tables.dart';
 
 part 'app_database.g.dart';
@@ -26,8 +27,9 @@ class AppDatabase extends _$AppDatabase {
 
   /// 1: first release.
   /// 2: payment method currency, exchanges and exchange rates.
+  /// 3: so'm exchange fees are saved as expenses (transaction exchangeId).
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -48,6 +50,11 @@ class AppDatabase extends _$AppDatabase {
           "SELECT 'Cash (USD)', 'cash', 0, MAX(sort_order) + 1, 'usd' "
           'FROM payment_methods HAVING COUNT(*) > 0',
         );
+      }
+      if (from < 3) {
+        await m.addColumn(transactions, transactions.exchangeId);
+        // Fees saved before this version become expenses too.
+        await addMissingFeeExpenses(this);
       }
     },
     beforeOpen: (details) async {

@@ -1,7 +1,10 @@
 import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personal_finance/core/time/clock.dart';
 import 'package:personal_finance/data/db/app_database.dart';
+import 'package:personal_finance/data/models/exchange_details.dart';
+import 'package:personal_finance/data/repositories/exchange_repository.dart';
 import 'package:personal_finance/data/repositories/settings_repository.dart';
 import 'package:personal_finance/features/exchange/ui/edit_exchange_page.dart';
 import 'package:personal_finance/features/exchange/ui/exchange_detail_page.dart';
@@ -135,5 +138,50 @@ void main() {
     );
     expect(after.occurredAt, before.occurredAt);
     expect(find.text(r'+$101.20'), findsOneWidget);
+  });
+
+  testApp('a fee expense links to its exchange', sampleData: true, (
+    tester,
+    db,
+  ) async {
+    // Give the 30 Sep exchange a 24 900 so'm fee.
+    await tester.runAsync(() async {
+      final repo = ExchangeRepository(db, const SystemClock());
+      final e = (await repo.getAll()).first;
+      final x = e.exchange;
+      await repo.update(
+        x.id,
+        ExchangeDraft(
+          fromMethodId: x.fromMethodId,
+          fromAmount: x.fromAmount,
+          toMethodId: x.toMethodId,
+          toAmount: x.toAmount,
+          rate: x.rate,
+          fee: 24900,
+          occurredAt: x.occurredAt,
+        ),
+      );
+    });
+    await _settle(tester);
+    await _openTab(tester);
+    final fee = find.text('Exchange fee · 11:30');
+    await tester.ensureVisible(fee);
+    await tester.pumpAndSettle();
+    await tester.tap(fee);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('This is the fee of an exchange'),
+      findsOneWidget,
+    );
+    expect(find.text('Duplicate'), findsNothing);
+    expect(find.bySemanticsLabel('Delete transaction'), findsNothing);
+
+    final open = find.text('Open exchange');
+    await tester.ensureVisible(open);
+    await tester.pumpAndSettle();
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+    expect(find.byType(ExchangeDetailPage), findsOneWidget);
+    expect(find.text('24 900 UZS'), findsOneWidget);
   });
 }
