@@ -14,6 +14,7 @@ import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/category_icon_tile.dart';
 import '../../../core/widgets/pill.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_details.dart';
 import '../../../data/models/transaction_kind.dart';
@@ -70,20 +71,14 @@ class TransactionDetailPage extends ConsumerWidget {
   }
 
   Future<void> _duplicate(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final toast = TopToast.of(context);
     final router = GoRouter.of(context);
     final newId = await ref.read(transactionRepositoryProvider).duplicate(id);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: const Text('Copy added with today’s date'),
-          action: SnackBarAction(
-            label: 'Open',
-            onPressed: () => router.push(Routes.transactionDetail(newId)),
-          ),
-        ),
-      );
+    toast.show(
+      'Copy added with today’s date',
+      actionLabel: 'Open',
+      onAction: () => router.push(Routes.transactionDetail(newId)),
+    );
   }
 
   Future<void> _delete(
@@ -94,22 +89,16 @@ class TransactionDetailPage extends ConsumerWidget {
     final confirmed = await showDeleteConfirmSheet(context, item);
     if (confirmed != true || !context.mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
+    final toast = TopToast.of(context);
     final repo = ref.read(transactionRepositoryProvider);
     // Leave the page first, so it does not flash "not found".
     context.pop();
     await repo.delete(item.id);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: const Text('Transaction deleted'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () => repo.restore(item.transaction),
-          ),
-        ),
-      );
+    toast.show(
+      'Transaction deleted',
+      actionLabel: 'Undo',
+      onAction: () => repo.restore(item.transaction),
+    );
   }
 }
 

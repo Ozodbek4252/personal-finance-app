@@ -10,6 +10,7 @@ import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/category_icon_tile.dart';
 import '../../../core/widgets/segmented_tabs.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
@@ -90,7 +91,7 @@ class _CategoryFormPageState extends ConsumerState<CategoryFormPage> {
     if (!_canSave) return;
     setState(() => _saving = true);
     final repo = ref.read(categoryRepositoryProvider);
-    final messenger = ScaffoldMessenger.of(context);
+    final toast = TopToast.of(context);
     final name = _name.text.trim();
 
     if (_editing case final row?) {
@@ -117,13 +118,7 @@ class _CategoryFormPageState extends ConsumerState<CategoryFormPage> {
     }
     if (!mounted) return;
     context.pop();
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(_isEdit ? 'Category saved' : 'Category created'),
-        ),
-      );
+    toast.show(_isEdit ? 'Category saved' : 'Category created');
   }
 
   Future<void> _remove() async {

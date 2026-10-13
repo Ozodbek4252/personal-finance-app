@@ -15,6 +15,7 @@ import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/option_sheet.dart';
 import '../../../core/widgets/text_input_dialog.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/currency.dart';
 import '../../../data/models/display_style.dart';
@@ -233,7 +234,7 @@ class ExchangeForm extends ConsumerWidget {
     WidgetRef ref,
     ExchangeView view,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final toast = TopToast.of(context);
     final repo = ref.read(exchangeRepositoryProvider);
     final id = await ref.read(exchangeFormProvider(_args).notifier).save(view);
     if (id == null || !context.mounted) return;
@@ -241,19 +242,14 @@ class ExchangeForm extends ConsumerWidget {
     context.pop();
     final a = view.amounts!;
     if (editing != null) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('Exchange updated')));
+      toast.show('Exchange updated');
       return;
     }
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          'Exchange saved · ${_buttonAmount(view.giveCurrency, a.give)} → '
-          '${_buttonAmount(view.getCurrency, a.get)}',
-        ),
-        action: SnackBarAction(label: 'Undo', onPressed: () => repo.delete(id)),
-      ),
+    toast.show(
+      'Exchange saved · ${_buttonAmount(view.giveCurrency, a.give)} → '
+      '${_buttonAmount(view.getCurrency, a.get)}',
+      actionLabel: 'Undo',
+      onAction: () => repo.delete(id),
     );
   }
 

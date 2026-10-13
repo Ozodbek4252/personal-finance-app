@@ -15,6 +15,7 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/dashed_border.dart';
 import '../../../core/widgets/segmented_tabs.dart';
 import '../../../core/widgets/text_input_dialog.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/providers/data_providers.dart';
 import '../../../data/rates/rate_service.dart';
 import '../../../data/rates/rate_source.dart';
@@ -32,11 +33,7 @@ class CurrenciesPage extends ConsumerStatefulWidget {
 class _CurrenciesPageState extends ConsumerState<CurrenciesPage> {
   bool _refreshing = false;
 
-  void _toast(String text) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
-  }
+  void _toast(String text) => showToast(context, text);
 
   Future<void> _refresh() async {
     setState(() => _refreshing = true);

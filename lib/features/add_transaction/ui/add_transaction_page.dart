@@ -13,6 +13,7 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/category_icon_tile.dart';
 import '../../../core/widgets/option_sheet.dart';
 import '../../../core/widgets/segmented_tabs.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_kind.dart';
@@ -235,20 +236,17 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
   Future<void> _save(BuildContext context, WidgetRef ref) async {
     final provider = addTransactionProvider(initialKind);
     final state = ref.read(provider);
-    final messenger = ScaffoldMessenger.of(context);
+    final toast = TopToast.of(context);
     final repo = ref.read(transactionRepositoryProvider);
     final id = await ref.read(provider.notifier).save();
     if (id == null || !context.mounted) return;
 
     context.pop();
     final what = state.kind == TransactionKind.income ? 'Income' : 'Expense';
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          '$what saved · ${MoneyFormat.withCurrency(state.amount)}',
-        ),
-        action: SnackBarAction(label: 'Undo', onPressed: () => repo.delete(id)),
-      ),
+    toast.show(
+      '$what saved · ${MoneyFormat.withCurrency(state.amount)}',
+      actionLabel: 'Undo',
+      onAction: () => repo.delete(id),
     );
   }
 
@@ -357,11 +355,8 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     if (name != null) controller.setReceipt(name);
   }
 
-  static void _showMessage(BuildContext context, String text) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
-  }
+  static void _showMessage(BuildContext context, String text) =>
+      showToast(context, text);
 }
 
 class _Header extends StatelessWidget {

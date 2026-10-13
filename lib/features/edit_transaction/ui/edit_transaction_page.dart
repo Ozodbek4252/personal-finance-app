@@ -14,6 +14,7 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/category_icon_tile.dart';
 import '../../../core/widgets/option_sheet.dart';
 import '../../../core/widgets/segmented_tabs.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/db/app_database.dart';
 import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_details.dart';
@@ -202,7 +203,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
     final category = _category;
     if (!_canSave || category == null) return;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
+    final toast = TopToast.of(context);
     await ref
         .read(transactionRepositoryProvider)
         .update(
@@ -226,9 +227,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
     }
     if (!mounted) return;
     context.pop();
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Changes saved')));
+    toast.show('Changes saved');
   }
 
   /// Asks before throwing away unsaved changes.

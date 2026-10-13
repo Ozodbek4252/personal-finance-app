@@ -16,6 +16,7 @@ import '../../../core/widgets/option_sheet.dart';
 import '../../../core/widgets/page_title.dart';
 import '../../../core/widgets/segmented_tabs.dart';
 import '../../../core/widgets/text_input_dialog.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/backup/backup_service.dart';
 import '../../../data/backup/file_io.dart';
 import '../../../data/models/transaction_kind.dart';
@@ -195,11 +196,8 @@ class SettingsPage extends ConsumerWidget {
 
   // ---- Actions ----
 
-  static void _toast(BuildContext context, String text) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
-  }
+  static void _toast(BuildContext context, String text) =>
+      showToast(context, text);
 
   Future<void> _editName(BuildContext context, WidgetRef ref) async {
     final name = await showTextInputDialog(

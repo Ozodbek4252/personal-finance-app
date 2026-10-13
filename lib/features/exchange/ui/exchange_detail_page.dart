@@ -11,6 +11,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_icon.dart';
 import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/pill.dart';
+import '../../../core/widgets/top_toast.dart';
 import '../../../data/models/display_style.dart';
 import '../../../data/models/exchange_details.dart';
 import '../../../data/providers/data_providers.dart';
@@ -91,22 +92,16 @@ class ExchangeDetailPage extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    final messenger = ScaffoldMessenger.of(context);
+    final toast = TopToast.of(context);
     final repo = ref.read(exchangeRepositoryProvider);
     // Leave the page first, so it does not flash "not found".
     context.pop();
     await repo.delete(item.id);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: const Text('Exchange deleted'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () => repo.restore(item.exchange),
-          ),
-        ),
-      );
+    toast.show(
+      'Exchange deleted',
+      actionLabel: 'Undo',
+      onAction: () => repo.restore(item.exchange),
+    );
   }
 }
 
