@@ -28,7 +28,8 @@ class BackupService {
   /// 1: categories, methods, transactions, settings.
   /// 2: adds method currency, exchanges and exchange rates.
   /// 3: adds the exchange of a fee expense (transaction exchangeId).
-  static const _version = 3;
+  /// 4: adds dollar amounts of transactions (transaction usdAmount).
+  static const _version = 4;
 
   Future<String> create() async {
     final data = {

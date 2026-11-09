@@ -15,6 +15,7 @@ import '../../../core/widgets/option_sheet.dart';
 import '../../../core/widgets/segmented_tabs.dart';
 import '../../../core/widgets/top_toast.dart';
 import '../../../data/db/app_database.dart';
+import '../../../data/models/currency.dart';
 import '../../../data/models/display_style.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
@@ -64,7 +65,16 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final controller = ref.read(provider.notifier);
     final categories =
         ref.watch(categoriesProvider(state.kind)).value ?? const [];
-    final methods = ref.watch(paymentMethodsProvider).value ?? const [];
+    // Dollars are paid from dollar methods.
+    final methods =
+        ref
+            .watch(
+              state.currency == Currency.usd
+                  ? dollarMethodsProvider
+                  : paymentMethodsProvider,
+            )
+            .value ??
+        const [];
     // The default payment method comes from settings.
     ref.watch(currentSettingsProvider);
     final methodId = controller.effectivePaymentMethodId();
@@ -158,12 +168,10 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
       AmountDisplay(
         amount: state.amount,
         kind: state.kind,
-        usdLine: _usdLine(state.amount, rate),
-        onCurrencyTap: () => _showMessage(
-          context,
-          'Expenses and income are in so’m. Use Exchange to buy or sell '
-          'dollars.',
-        ),
+        currency: state.currency,
+        typed: state.digits,
+        usdLine: _usdLine(state, rate),
+        onCurrencyTap: () => _pickCurrency(context, ref, state.currency),
       ),
       const SizedBox(height: 12),
       _QuickChips(
@@ -202,35 +210,90 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
         ),
       const Spacer(),
       const SizedBox(height: 12),
-      NumberKeypad(onKey: controller.press, onClear: controller.clearAmount),
+      NumberKeypad(
+        onKey: controller.press,
+        onClear: controller.clearAmount,
+        // Dollars can have cents; so'm cannot.
+        decimal: state.currency == Currency.usd,
+      ),
       const SizedBox(height: 12),
       PrimaryButton(
-        label: _saveLabel(state),
+        label: _saveLabel(state, rate),
         background: isIncome ? c.income : null,
-        onPressed: state.canSave ? () => _save(context, ref) : null,
+        onPressed: _canSave(state, rate, method)
+            ? () => _save(context, ref)
+            : null,
       ),
     ];
   }
 
-  /// "≈ $2.77 · 1 USD = 12 650 UZS", or just the rate before an amount
-  /// is typed. Null without a rate.
-  static String? _usdLine(int amount, UsdRate? rate) {
-    if (rate == null) return null;
+  /// "≈ $2.77 · 1 USD = 12 650 UZS" for so'm, "≈ 409 000 UZS · …" for
+  /// dollars, or just the rate before an amount is typed. Null without
+  /// a rate.
+  static String? _usdLine(AddTransactionState s, UsdRate? rate) {
+    if (rate == null) {
+      return s.currency == Currency.usd ? 'No USD rate yet' : null;
+    }
     final rateText = '1 USD = ${MoneyFormat.rate(rate.value)} UZS';
-    if (amount == 0) return rateText;
-    return '≈ ${MoneyFormat.dollars(rate.toCents(amount))} · $rateText';
+    if (s.amount == 0) return rateText;
+    final other = s.currency == Currency.usd
+        ? MoneyFormat.withCurrency((s.amount * rate.value / 100).round())
+        : MoneyFormat.dollars(rate.toCents(s.amount));
+    return '≈ $other · $rateText';
   }
 
-  static String _saveLabel(AddTransactionState s) {
+  /// "35 000 UZS" or "$34.12".
+  static String _amountText(AddTransactionState s) => s.currency == Currency.usd
+      ? MoneyFormat.dollarsShort(s.amount)
+      : MoneyFormat.withCurrency(s.amount);
+
+  static bool _canSave(
+    AddTransactionState s,
+    UsdRate? rate,
+    PaymentMethodRow? method,
+  ) =>
+      s.canSave &&
+      method != null &&
+      (s.currency == Currency.uzs || rate != null);
+
+  static String _saveLabel(AddTransactionState s, UsdRate? rate) {
     final isIncome = s.kind == TransactionKind.income;
     final base = isIncome ? 'Save income' : 'Save expense';
     if (s.amount == 0) return base;
     if (s.categoryId == null) {
       return isIncome ? 'Choose a source' : 'Choose a category';
     }
-    return isIncome
-        ? '$base · ${MoneyFormat.signed(s.amount)}'
-        : '$base · ${MoneyFormat.withCurrency(s.amount)}';
+    if (s.currency == Currency.usd && rate == null) return 'Needs a USD rate';
+    if (isIncome && s.currency == Currency.uzs) {
+      return '$base · ${MoneyFormat.signed(s.amount)}';
+    }
+    return '$base · ${isIncome ? '+' : ''}${_amountText(s)}';
+  }
+
+  /// UZS or USD. Dollars are paid from dollar methods.
+  Future<void> _pickCurrency(
+    BuildContext context,
+    WidgetRef ref,
+    Currency current,
+  ) async {
+    final picked = await showOptionSheet<Currency>(
+      context,
+      title: 'Currency',
+      selected: current,
+      options: const [
+        SheetOption(value: Currency.uzs, label: 'UZS · so’m'),
+        SheetOption(
+          value: Currency.usd,
+          label: 'USD · dollar',
+          subtitle: 'Paid from a dollar method, like Cash (USD)',
+        ),
+      ],
+    );
+    if (picked != null) {
+      ref
+          .read(addTransactionProvider(initialKind).notifier)
+          .setCurrency(picked);
+    }
   }
 
   Future<void> _save(BuildContext context, WidgetRef ref) async {
@@ -244,7 +307,7 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     context.pop();
     final what = state.kind == TransactionKind.income ? 'Income' : 'Expense';
     toast.show(
-      '$what saved · ${MoneyFormat.withCurrency(state.amount)}',
+      '$what saved · ${_amountText(state)}',
       actionLabel: 'Undo',
       onAction: () => repo.delete(id),
     );
@@ -354,9 +417,6 @@ class _AddTransactionPageState extends ConsumerState<AddTransactionPage> {
     final name = await pickReceipt(context, ref);
     if (name != null) controller.setReceipt(name);
   }
-
-  static void _showMessage(BuildContext context, String text) =>
-      showToast(context, text);
 }
 
 class _Header extends StatelessWidget {

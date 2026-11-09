@@ -18,8 +18,15 @@ class TransactionDetails {
   TransactionKind get kind => transaction.kind;
   DateTime get occurredAt => transaction.occurredAt;
 
-  /// Positive for income, negative for expense.
+  /// Positive for income, negative for expense. In so'm, also for a
+  /// dollar transaction (its so'm value at that day's rate).
   int get signedAmount => transaction.amount * transaction.kind.sign;
+
+  /// Cents with the sign, for a dollar transaction; else null.
+  int? get signedUsd => switch (transaction.usdAmount) {
+    final cents? => cents * transaction.kind.sign,
+    null => null,
+  };
 }
 
 /// Data for a new transaction, or new values for an existing one.
@@ -33,12 +40,18 @@ class TransactionDraft {
     this.note,
     this.description,
     this.receiptPath,
-  }) : assert(amount > 0, 'Amount must be positive.');
+    this.usdAmount,
+  }) : assert(amount > 0, 'Amount must be positive.'),
+       assert(usdAmount == null || usdAmount > 0, 'Cents must be positive.');
 
   final TransactionKind kind;
 
-  /// Whole UZS, always positive.
+  /// Whole UZS, always positive. For a dollar transaction, the so'm
+  /// value of [usdAmount] at that day's rate.
   final int amount;
+
+  /// Cents, for a transaction on a dollar method. Null for so'm.
+  final int? usdAmount;
   final int categoryId;
   final int paymentMethodId;
   final DateTime occurredAt;

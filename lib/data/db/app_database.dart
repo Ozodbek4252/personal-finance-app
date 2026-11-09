@@ -28,8 +28,9 @@ class AppDatabase extends _$AppDatabase {
   /// 1: first release.
   /// 2: payment method currency, exchanges and exchange rates.
   /// 3: so'm exchange fees are saved as expenses (transaction exchangeId).
+  /// 4: expenses and income in dollars (transaction usdAmount).
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +56,9 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(transactions, transactions.exchangeId);
         // Fees saved before this version become expenses too.
         await addMissingFeeExpenses(this);
+      }
+      if (from < 4) {
+        await m.addColumn(transactions, transactions.usdAmount);
       }
     },
     beforeOpen: (details) async {

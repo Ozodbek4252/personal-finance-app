@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/format/date_format.dart';
+import '../../../../core/format/money_format.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/widgets/amount_text.dart';
@@ -92,15 +93,27 @@ class TransactionTile extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  AmountText(
-                    item.signedAmount,
-                    signed: true,
-                    color: isIncome ? c.income : c.textPrimary,
-                    style: AppText.body15Strong.copyWith(letterSpacing: -0.15),
-                  ),
+                  if (item.signedUsd case final cents?)
+                    // Paid in dollars: show the dollars, not the so'm.
+                    Text(
+                      MoneyFormat.signedDollars(cents),
+                      style: AppText.body15Strong.copyWith(
+                        letterSpacing: -0.15,
+                        color: isIncome ? c.income : c.textPrimary,
+                      ),
+                    )
+                  else
+                    AmountText(
+                      item.signedAmount,
+                      signed: true,
+                      color: isIncome ? c.income : c.textPrimary,
+                      style: AppText.body15Strong.copyWith(
+                        letterSpacing: -0.15,
+                      ),
+                    ),
                   const SizedBox(height: 2),
                   Text(
-                    usdText == null
+                    usdText == null || item.signedUsd != null
                         ? item.paymentMethod.name
                         : '$usdText · ${item.paymentMethod.name}',
                     style: AppText.small12Regular.copyWith(

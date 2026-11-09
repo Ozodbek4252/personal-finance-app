@@ -161,4 +161,59 @@ void main() {
       expect(addStore.deleted, isEmpty, reason: 'saved photo is kept');
     },
   );
+
+  testApp(
+    'a dollar expense is edited in dollars at its own rate',
+    sampleData: true,
+    (tester, db) async {
+      // $34.12 saved at 12 650 (431 618 UZS) from Cash (USD).
+      await tester.runAsync(() async {
+        final cash = await (db.select(
+          db.paymentMethods,
+        )..where((m) => m.name.equals('Cash (USD)'))).getSingle();
+        final food = await (db.select(
+          db.categories,
+        )..where((c) => c.name.equals('Food'))).getSingle();
+        final at = DateTime(2026, 9, 30, 14, 30);
+        await db
+            .into(db.transactions)
+            .insert(
+              TransactionsCompanion.insert(
+                kind: TransactionKind.expense,
+                amount: 431618,
+                usdAmount: const Value(3412),
+                categoryId: food.id,
+                paymentMethodId: cash.id,
+                occurredAt: at,
+                note: const Value('Dollar lunch'),
+                createdAt: at,
+                updatedAt: at,
+              ),
+            );
+      });
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Transactions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dollar lunch · 14:30'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Edit transaction'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditTransactionPage), findsOneWidget);
+      expect(find.text('USD'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).first, '10');
+      await tester.pump();
+      await tester.tap(find.text('Save changes').last);
+      await tester.pumpAndSettle();
+
+      final row = await tester.runAsync(
+        () => (db.select(
+          db.transactions,
+        )..where((t) => t.note.equals('Dollar lunch'))).getSingle(),
+      );
+      // $10 at the same rate (12 650) = 126 500 UZS.
+      expect((row!.usdAmount, row.amount), (1000, 126500));
+    },
+  );
 }

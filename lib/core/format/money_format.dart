@@ -85,10 +85,24 @@ abstract final class MoneyFormat {
     return '$sign\$$body';
   }
 
+  /// Dollars with a sign: "+$1 000.00", "−$34.12". Zero has no sign.
+  static String signedDollars(int cents) =>
+      cents > 0 ? '+${dollars(cents)}' : dollars(cents);
+
   /// Like [dollars], but without ".00" when there are no cents:
   /// 10000 → "$100", 10050 → "$100.50".
   static String dollarsShort(int cents) =>
       dollars(cents, round: cents % 100 == 0);
+
+  /// Dollars as typed on the keypad: "100.5" → "$100.5", "1000." →
+  /// "$1 000.", "" → "$0". Keeps a "." or a trailing zero while typing.
+  static String typedDollars(String typed) {
+    if (typed.isEmpty) return r'$0';
+    final [whole, ...rest] = typed.split('.');
+    final grouped = amount(whole.isEmpty ? 0 : int.parse(whole));
+    final mark = style == NumberStyle.dot ? ',' : '.';
+    return rest.isEmpty ? '\$$grouped' : '\$$grouped$mark${rest.first}';
+  }
 
   /// 1265037 → "12 650.37" (or "12.650,37" with the dot style).
   static String _withCents(int value) {

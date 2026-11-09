@@ -25,7 +25,11 @@ String buildTransactionsCsv(
           t.kind == TransactionKind.income ? 'Income' : 'Expense',
           t.category.name,
           '${t.signedAmount}',
-          '',
+          // Paid in dollars: the dollars too ("UZS" is that day's value).
+          switch (t.signedUsd) {
+            final cents? => _plain(cents, Currency.usd),
+            null => '',
+          },
           t.paymentMethod.name,
           t.transaction.note ?? '',
           t.transaction.description ?? '',

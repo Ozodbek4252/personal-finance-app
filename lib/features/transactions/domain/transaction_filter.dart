@@ -166,8 +166,11 @@ class TransactionFilter {
     ].whereType<String>().join(' ').toLowerCase();
     if (text.contains(q)) return true;
     final digits = q.replaceAll(RegExp(r'[\s ]'), '');
-    return RegExp(r'^\d+$').hasMatch(digits) &&
-        row.amount.toString().contains(digits);
+    if (!RegExp(r'^\d+$').hasMatch(digits)) return false;
+    // Dollar transactions are also found by whole dollars.
+    final dollars = row.usdAmount == null ? null : '${row.usdAmount! ~/ 100}';
+    return row.amount.toString().contains(digits) ||
+        (dollars?.contains(digits) ?? false);
   }
 }
 

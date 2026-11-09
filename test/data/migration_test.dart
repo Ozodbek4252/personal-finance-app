@@ -11,6 +11,7 @@ import 'package:personal_finance/data/repositories/transaction_repository.dart';
 import '../generated_migrations/schema.dart';
 import '../generated_migrations/schema_v1.dart' as v1;
 import '../generated_migrations/schema_v2.dart' as v2;
+import '../generated_migrations/schema_v3.dart' as v3;
 
 /// Real user data lives in old databases. These tests open a database
 /// made by an older app version and check that an update keeps it.
@@ -20,11 +21,11 @@ void main() {
 
   setUpAll(() => verifier = SchemaVerifier(GeneratedHelper()));
 
-  for (final start in [1, 2]) {
-    test('$start → 3 gives the same tables as a fresh install', () async {
+  for (final start in [1, 2, 3]) {
+    test('$start → 4 gives the same tables as a fresh install', () async {
       final schema = await verifier.schemaAt(start);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 3);
+      await verifier.migrateAndValidate(db, 4);
       await db.close();
     });
   }
@@ -247,5 +248,52 @@ void main() {
       expect(category.kind, TransactionKind.expense);
       await db.close();
     });
+  });
+
+  test('3 → 4 keeps every transaction as so’m', () async {
+    final schema = await verifier.schemaAt(3);
+    final old = v3.DatabaseAtV3(schema.newConnection());
+    final at = DateTime(2026, 11, 1, 9).millisecondsSinceEpoch ~/ 1000;
+    await old.batch((b) {
+      b.insert(
+        old.categories,
+        v3.CategoriesCompanion.insert(
+          name: 'Food',
+          kind: 'expense',
+          iconKey: 'food',
+          colorKey: 'orange',
+          sortOrder: 0,
+        ),
+      );
+      b.insert(
+        old.paymentMethods,
+        v3.PaymentMethodsCompanion.insert(
+          name: 'Humo',
+          iconKey: 'card',
+          sortOrder: 0,
+          openingBalance: const Value(1000000),
+        ),
+      );
+      b.insert(
+        old.transactions,
+        v3.TransactionsCompanion.insert(
+          kind: 'expense',
+          amount: 85000,
+          categoryId: 1,
+          paymentMethodId: 1,
+          occurredAt: at,
+          createdAt: at,
+          updatedAt: at,
+        ),
+      );
+    });
+    await old.close();
+
+    final db = AppDatabase(schema.newConnection());
+    final tx = await db.select(db.transactions).getSingle();
+    expect((tx.amount, tx.usdAmount), (85000, null));
+    final repo = TransactionRepository(db, const SystemClock());
+    expect((await repo.getBalances())[1], 1000000 - 85000);
+    await db.close();
   });
 }

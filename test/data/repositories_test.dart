@@ -339,6 +339,34 @@ void main() {
       expect(usd[cashUsd], 10000 - 4000 - 150);
     });
 
+    test('dollar expenses lower the dollar balance, in cents', () async {
+      await exchanges.add(buy(100, 12650));
+      await transactions.add(
+        TransactionDraft(
+          kind: TransactionKind.expense,
+          amount: 431000, // $34.12 at 12 632, for statistics
+          usdAmount: 3412,
+          categoryId: groceries,
+          paymentMethodId: cashUsd,
+          occurredAt: DateTime(2026, 9, 30, 12),
+        ),
+      );
+      final usd = await transactions
+          .watchBalances(currency: Currency.usd)
+          .first;
+      expect(usd[cashUsd], 10000 - 3412);
+      // So'm balances do not change; statistics count the so'm value.
+      expect((await transactions.getBalances())[humo], -1265000);
+      final month = (await transactions.watchMonthTotals().first).single;
+      expect(month.expense, 431000);
+
+      final row = (await transactions.watchRecent().first).first;
+      expect(row.signedUsd, -3412);
+      final copy = await transactions.duplicate(row.id);
+      final dup = await transactions.watchById(copy).first;
+      expect(dup?.transaction.usdAmount, 3412);
+    });
+
     test('exchanges are not income or expenses', () async {
       await exchanges.add(buy(100, 12650));
       expect(await transactions.watchMonthTotals().first, isEmpty);

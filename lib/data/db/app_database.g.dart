@@ -1813,6 +1813,17 @@ class $TransactionsTable extends Transactions
       'REFERENCES exchanges (id)',
     ),
   );
+  static const VerificationMeta _usdAmountMeta = const VerificationMeta(
+    'usdAmount',
+  );
+  @override
+  late final GeneratedColumn<int> usdAmount = GeneratedColumn<int>(
+    'usd_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1827,6 +1838,7 @@ class $TransactionsTable extends Transactions
     createdAt,
     updatedAt,
     exchangeId,
+    usdAmount,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1924,6 +1936,12 @@ class $TransactionsTable extends Transactions
         exchangeId.isAcceptableOrUnknown(data['exchange_id']!, _exchangeIdMeta),
       );
     }
+    if (data.containsKey('usd_amount')) {
+      context.handle(
+        _usdAmountMeta,
+        usdAmount.isAcceptableOrUnknown(data['usd_amount']!, _usdAmountMeta),
+      );
+    }
     return context;
   }
 
@@ -1983,6 +2001,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.int,
         data['${effectivePrefix}exchange_id'],
       ),
+      usdAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}usd_amount'],
+      ),
     );
   }
 
@@ -2022,6 +2044,11 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
   /// keeps it in step: editing or deleting the exchange changes or
   /// removes it. Added in schema 3.
   final int? exchangeId;
+
+  /// Set when the money came from or went to a dollar method: the
+  /// amount in cents. [amount] then holds its so'm value at that day's
+  /// rate, so totals and statistics stay in so'm. Added in schema 4.
+  final int? usdAmount;
   const TransactionRow({
     required this.id,
     required this.kind,
@@ -2035,6 +2062,7 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
     required this.createdAt,
     required this.updatedAt,
     this.exchangeId,
+    this.usdAmount,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2063,6 +2091,9 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
     if (!nullToAbsent || exchangeId != null) {
       map['exchange_id'] = Variable<int>(exchangeId);
     }
+    if (!nullToAbsent || usdAmount != null) {
+      map['usd_amount'] = Variable<int>(usdAmount);
+    }
     return map;
   }
 
@@ -2086,6 +2117,9 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
       exchangeId: exchangeId == null && nullToAbsent
           ? const Value.absent()
           : Value(exchangeId),
+      usdAmount: usdAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(usdAmount),
     );
   }
 
@@ -2109,6 +2143,7 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       exchangeId: serializer.fromJson<int?>(json['exchangeId']),
+      usdAmount: serializer.fromJson<int?>(json['usdAmount']),
     );
   }
   @override
@@ -2129,6 +2164,7 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'exchangeId': serializer.toJson<int?>(exchangeId),
+      'usdAmount': serializer.toJson<int?>(usdAmount),
     };
   }
 
@@ -2145,6 +2181,7 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<int?> exchangeId = const Value.absent(),
+    Value<int?> usdAmount = const Value.absent(),
   }) => TransactionRow(
     id: id ?? this.id,
     kind: kind ?? this.kind,
@@ -2158,6 +2195,7 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     exchangeId: exchangeId.present ? exchangeId.value : this.exchangeId,
+    usdAmount: usdAmount.present ? usdAmount.value : this.usdAmount,
   );
   TransactionRow copyWithCompanion(TransactionsCompanion data) {
     return TransactionRow(
@@ -2185,6 +2223,7 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
       exchangeId: data.exchangeId.present
           ? data.exchangeId.value
           : this.exchangeId,
+      usdAmount: data.usdAmount.present ? data.usdAmount.value : this.usdAmount,
     );
   }
 
@@ -2202,7 +2241,8 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
           ..write('receiptPath: $receiptPath, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('exchangeId: $exchangeId')
+          ..write('exchangeId: $exchangeId, ')
+          ..write('usdAmount: $usdAmount')
           ..write(')'))
         .toString();
   }
@@ -2221,6 +2261,7 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
     createdAt,
     updatedAt,
     exchangeId,
+    usdAmount,
   );
   @override
   bool operator ==(Object other) =>
@@ -2237,7 +2278,8 @@ class TransactionRow extends DataClass implements Insertable<TransactionRow> {
           other.receiptPath == this.receiptPath &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
-          other.exchangeId == this.exchangeId);
+          other.exchangeId == this.exchangeId &&
+          other.usdAmount == this.usdAmount);
 }
 
 class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
@@ -2253,6 +2295,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int?> exchangeId;
+  final Value<int?> usdAmount;
   const TransactionsCompanion({
     this.id = const Value.absent(),
     this.kind = const Value.absent(),
@@ -2266,6 +2309,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.exchangeId = const Value.absent(),
+    this.usdAmount = const Value.absent(),
   });
   TransactionsCompanion.insert({
     this.id = const Value.absent(),
@@ -2280,6 +2324,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
     required DateTime createdAt,
     required DateTime updatedAt,
     this.exchangeId = const Value.absent(),
+    this.usdAmount = const Value.absent(),
   }) : kind = Value(kind),
        amount = Value(amount),
        categoryId = Value(categoryId),
@@ -2300,6 +2345,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? exchangeId,
+    Expression<int>? usdAmount,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2314,6 +2360,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (exchangeId != null) 'exchange_id': exchangeId,
+      if (usdAmount != null) 'usd_amount': usdAmount,
     });
   }
 
@@ -2330,6 +2377,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int?>? exchangeId,
+    Value<int?>? usdAmount,
   }) {
     return TransactionsCompanion(
       id: id ?? this.id,
@@ -2344,6 +2392,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       exchangeId: exchangeId ?? this.exchangeId,
+      usdAmount: usdAmount ?? this.usdAmount,
     );
   }
 
@@ -2388,6 +2437,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
     if (exchangeId.present) {
       map['exchange_id'] = Variable<int>(exchangeId.value);
     }
+    if (usdAmount.present) {
+      map['usd_amount'] = Variable<int>(usdAmount.value);
+    }
     return map;
   }
 
@@ -2405,7 +2457,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRow> {
           ..write('receiptPath: $receiptPath, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('exchangeId: $exchangeId')
+          ..write('exchangeId: $exchangeId, ')
+          ..write('usdAmount: $usdAmount')
           ..write(')'))
         .toString();
   }
@@ -4261,6 +4314,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int?> exchangeId,
+      Value<int?> usdAmount,
     });
 typedef $$TransactionsTableUpdateCompanionBuilder =
     TransactionsCompanion Function({
@@ -4276,6 +4330,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int?> exchangeId,
+      Value<int?> usdAmount,
     });
 
 final class $$TransactionsTableReferences
@@ -4387,6 +4442,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get usdAmount => $composableBuilder(
+    column: $table.usdAmount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4514,6 +4574,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get usdAmount => $composableBuilder(
+    column: $table.usdAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get categoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4625,6 +4690,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get usdAmount =>
+      $composableBuilder(column: $table.usdAmount, builder: (column) => column);
 
   $$CategoriesTableAnnotationComposer get categoryId {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -4740,6 +4808,7 @@ class $$TransactionsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int?> exchangeId = const Value.absent(),
+                Value<int?> usdAmount = const Value.absent(),
               }) => TransactionsCompanion(
                 id: id,
                 kind: kind,
@@ -4753,6 +4822,7 @@ class $$TransactionsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 exchangeId: exchangeId,
+                usdAmount: usdAmount,
               ),
           createCompanionCallback:
               ({
@@ -4768,6 +4838,7 @@ class $$TransactionsTableTableManager
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int?> exchangeId = const Value.absent(),
+                Value<int?> usdAmount = const Value.absent(),
               }) => TransactionsCompanion.insert(
                 id: id,
                 kind: kind,
@@ -4781,6 +4852,7 @@ class $$TransactionsTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 exchangeId: exchangeId,
+                usdAmount: usdAmount,
               ),
           withReferenceMapper: (p0) => p0
               .map(

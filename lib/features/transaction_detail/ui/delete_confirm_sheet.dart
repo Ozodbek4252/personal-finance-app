@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format/date_format.dart';
+import '../../../core/format/money_format.dart';
 import '../../../core/icons/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -134,11 +135,19 @@ class _DeleteConfirm extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      AmountText(
-                        item.signedAmount,
-                        signed: true,
-                        color: isIncome ? c.income : c.textPrimary,
-                      ),
+                      if (item.signedUsd case final cents?)
+                        Text(
+                          MoneyFormat.signedDollars(cents),
+                          style: AppText.body15Strong.copyWith(
+                            color: isIncome ? c.income : c.textPrimary,
+                          ),
+                        )
+                      else
+                        AmountText(
+                          item.signedAmount,
+                          signed: true,
+                          color: isIncome ? c.income : c.textPrimary,
+                        ),
                     ],
                   ),
                 ),

@@ -298,14 +298,33 @@ class _Hero extends StatelessWidget {
             style: AppText.body15.copyWith(color: c.textSecondary),
           ),
           const SizedBox(height: 10),
-          AmountText(
-            item.signedAmount,
-            signed: true,
-            color: isIncome ? c.income : c.textPrimary,
-            style: AppText.amount40.copyWith(fontSize: 38),
-            unitStyle: AppText.body17.copyWith(color: c.textTertiary),
-            unitGap: 6,
-          ),
+          if (item.signedUsd case final cents?) ...[
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                MoneyFormat.signedDollars(cents),
+                maxLines: 1,
+                style: AppText.amount40.copyWith(
+                  fontSize: 38,
+                  color: isIncome ? c.income : c.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            // Statistics count it in so'm at that day's rate.
+            Text(
+              '≈ ${MoneyFormat.withCurrency(item.transaction.amount)}',
+              style: AppText.body17.copyWith(color: c.textTertiary),
+            ),
+          ] else
+            AmountText(
+              item.signedAmount,
+              signed: true,
+              color: isIncome ? c.income : c.textPrimary,
+              style: AppText.amount40.copyWith(fontSize: 38),
+              unitStyle: AppText.body17.copyWith(color: c.textTertiary),
+              unitGap: 6,
+            ),
           const SizedBox(height: 10),
           Pill(
             isIncome ? 'Income' : 'Expense',

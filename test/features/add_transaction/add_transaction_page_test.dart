@@ -163,4 +163,48 @@ void main() {
     await _type(tester, ['5']);
     expect(find.textContaining('1 USD ='), findsNothing);
   });
+
+  testApp('spends dollars from a dollar method', sampleData: true, (
+    tester,
+    db,
+  ) async {
+    await _openAdd(tester);
+    expect(find.bySemanticsLabel('Decimal point'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('Currency: UZS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('USD · dollar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cash (USD)'), findsOneWidget, reason: 'dollar method');
+    await _type(tester, ['3', '4', 'Decimal point', '1', '2']);
+    expect(find.bySemanticsLabel(r'Amount $34.12'), findsOneWidget);
+    // $34.12 at 12 650 = 431 618 UZS, for statistics.
+    expect(find.text('≈ 431 618 UZS · 1 USD = 12 650 UZS'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel('Food'));
+    await tester.pump();
+    await tester.tap(find.text(r'Save expense · $34.12'));
+    await tester.pumpAndSettle();
+    expect(find.text(r'Expense saved · $34.12'), findsOneWidget);
+
+    final saved = (await _rows(
+      tester,
+      db,
+    )).reduce((a, b) => a.id > b.id ? a : b);
+    expect((saved.usdAmount, saved.amount), (3412, 431618));
+    final method = await tester.runAsync(
+      () => (db.select(
+        db.paymentMethods,
+      )..where((m) => m.id.equals(saved.paymentMethodId))).getSingle(),
+    );
+    expect(method!.name, 'Cash (USD)');
+
+    // The list and the details show dollars.
+    await tester.tap(find.bySemanticsLabel('Transactions'));
+    await tester.pumpAndSettle();
+    expect(find.text(r'−$34.12'), findsOneWidget);
+    await tester.tap(find.text(r'−$34.12'));
+    await tester.pumpAndSettle();
+    expect(find.text('≈ 431 618 UZS'), findsOneWidget);
+  });
 }

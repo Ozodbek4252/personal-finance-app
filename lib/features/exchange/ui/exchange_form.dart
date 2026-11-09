@@ -404,7 +404,9 @@ class _MoneyCard extends StatelessWidget {
       text = MoneyFormat.amount(amount);
     } else {
       // Typed dollars show as typed; worked-out dollars show cents.
-      text = active ? _typedDollars(typed) : MoneyFormat.dollars(amount);
+      text = active
+          ? MoneyFormat.typedDollars(typed)
+          : MoneyFormat.dollars(amount);
     }
     final color = amount == 0
         ? c.textTertiary
@@ -519,14 +521,6 @@ class _MoneyCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// "100.5" → "$100.5", "1000." → "$1 000.", "" → "$0".
-String _typedDollars(String typed) {
-  if (typed.isEmpty) return r'$0';
-  final [whole, ...rest] = typed.split('.');
-  final grouped = MoneyFormat.amount(whole.isEmpty ? 0 : int.parse(whole));
-  return rest.isEmpty ? '\$$grouped' : '\$$grouped.${rest.first}';
 }
 
 /// "S UZS so'm ⌄" pill. Tapping it swaps buy and sell.

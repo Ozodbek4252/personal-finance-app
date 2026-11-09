@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/amount_input_formatter.dart';
 import '../../../core/format/date_format.dart';
 import '../../../core/format/money_format.dart';
+import '../../../core/format/rate_input.dart';
 import '../../../core/icons/app_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -59,8 +61,15 @@ class _EditFormState extends ConsumerState<_EditForm> {
   late PaymentMethodRow _method = widget.original.paymentMethod;
   late DateTime _occurredAt = _row.occurredAt;
   late String? _receipt = _row.receiptPath;
+
+  /// A dollar transaction keeps its currency; its amount is edited in
+  /// dollars, and the so'm value follows at the same rate.
+  late final bool _dollars = _row.usdAmount != null;
+
   late final _amount = TextEditingController(
-    text: MoneyFormat.amount(_row.amount),
+    text: _dollars
+        ? RateInput.plain(_row.usdAmount! / 100)
+        : MoneyFormat.amount(_row.amount),
   );
   late final _note = TextEditingController(text: _row.note ?? '');
   late final _description = TextEditingController(text: _row.description ?? '');
@@ -70,13 +79,16 @@ class _EditFormState extends ConsumerState<_EditForm> {
   /// end are deleted when the form closes.
   final _newReceipts = <String>{};
 
-  int get _amountValue => MoneyFormat.parseDigits(_amount.text);
+  /// Whole so'm, or cents for a dollar transaction.
+  int get _amountValue => _dollars
+      ? ((RateInput.parse(_amount.text) ?? 0) * 100).round()
+      : MoneyFormat.parseDigits(_amount.text);
 
   bool get _canSave => _amountValue > 0 && _category != null && !_saving;
 
   bool get _changed =>
       _kind != _row.kind ||
-      _amountValue != _row.amount ||
+      _amountValue != (_row.usdAmount ?? _row.amount) ||
       _category?.id != _row.categoryId ||
       _method.id != _row.paymentMethodId ||
       _occurredAt != _row.occurredAt ||
@@ -142,7 +154,12 @@ class _EditFormState extends ConsumerState<_EditForm> {
   }
 
   Future<void> _pickMethod() async {
-    final methods = ref.read(paymentMethodsProvider).value ?? const [];
+    // Only methods of the same currency.
+    final methods =
+        ref
+            .read(_dollars ? dollarMethodsProvider : paymentMethodsProvider)
+            .value ??
+        const [];
     final picked = await showOptionSheet<int>(
       context,
       title: 'Payment method',
@@ -210,7 +227,11 @@ class _EditFormState extends ConsumerState<_EditForm> {
           _row.id,
           TransactionDraft(
             kind: _kind,
-            amount: _amountValue,
+            // Dollars keep the rate they were saved with.
+            amount: _dollars
+                ? (_amountValue * _row.amount / _row.usdAmount!).round()
+                : _amountValue,
+            usdAmount: _dollars ? _amountValue : null,
             categoryId: category.id,
             paymentMethodId: _method.id,
             occurredAt: _occurredAt,
@@ -298,7 +319,7 @@ class _EditFormState extends ConsumerState<_EditForm> {
                       onChanged: _setKind,
                     ),
                     const SizedBox(height: 14),
-                    _AmountCard(controller: _amount),
+                    _AmountCard(controller: _amount, dollars: _dollars),
                     const SizedBox(height: 14),
                     AppCard(
                       padding: const EdgeInsets.symmetric(
@@ -464,9 +485,12 @@ class _Header extends StatelessWidget {
 }
 
 class _AmountCard extends StatelessWidget {
-  const _AmountCard({required this.controller});
+  const _AmountCard({required this.controller, this.dollars = false});
 
   final TextEditingController controller;
+
+  /// Dollars with cents, like "34.12", instead of whole so'm.
+  final bool dollars;
 
   @override
   Widget build(BuildContext context) {
@@ -487,8 +511,12 @@ class _AmountCard extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: controller,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: const [AmountInputFormatter()],
+                  keyboardType: dollars
+                      ? const TextInputType.numberWithOptions(decimal: true)
+                      : TextInputType.number,
+                  inputFormatters: dollars
+                      ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))]
+                      : const [AmountInputFormatter()],
                   style: AppText.title28.copyWith(fontSize: 34),
                   decoration: InputDecoration(
                     isCollapsed: true,
@@ -503,7 +531,7 @@ class _AmountCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                MoneyFormat.currency,
+                dollars ? 'USD' : MoneyFormat.currency,
                 style: AppText.body17.copyWith(color: c.textTertiary),
               ),
             ],

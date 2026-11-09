@@ -5,6 +5,7 @@ import '../../../../core/icons/app_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/widgets/app_icon.dart';
+import '../../../../data/models/currency.dart';
 import '../../../../data/models/transaction_kind.dart';
 
 /// "Amount" label, the big number with a blinking cursor, and the
@@ -16,6 +17,8 @@ class AmountDisplay extends StatelessWidget {
     required this.kind,
     required this.onCurrencyTap,
     this.usdLine,
+    this.currency = Currency.uzs,
+    this.typed = '',
   });
 
   final int amount;
@@ -25,17 +28,26 @@ class AmountDisplay extends StatelessWidget {
   /// "≈ $2.77 · 1 USD = 12 650 UZS" under the amount. Null hides it.
   final String? usdLine;
 
+  /// So'm or dollars. Dollars show [typed] as it is, like "$34.1".
+  final Currency currency;
+  final String typed;
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final isIncome = kind == TransactionKind.income;
+    final dollars = currency == Currency.usd;
     final String text;
     final Color color;
     if (amount == 0) {
-      text = '0';
+      // "$0." stays visible while typing cents.
+      text = dollars ? MoneyFormat.typedDollars(typed) : '0';
       color = c.textTertiary;
     } else {
-      text = isIncome ? MoneyFormat.signed(amount) : MoneyFormat.amount(amount);
+      final value = dollars
+          ? MoneyFormat.typedDollars(typed)
+          : MoneyFormat.amount(amount);
+      text = isIncome ? '+$value' : value;
       color = isIncome ? c.income : c.textPrimary;
     }
 
@@ -50,7 +62,9 @@ class AmountDisplay extends StatelessWidget {
           const SizedBox(height: 10),
           Semantics(
             liveRegion: true,
-            label: 'Amount ${MoneyFormat.withCurrency(amount)}',
+            label: dollars
+                ? 'Amount ${MoneyFormat.dollars(amount)}'
+                : 'Amount ${MoneyFormat.withCurrency(amount)}',
             excludeSemantics: true,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -83,7 +97,7 @@ class AmountDisplay extends StatelessWidget {
           Semantics(
             container: true,
             button: true,
-            label: 'Currency: ${MoneyFormat.currency}',
+            label: 'Currency: ${currency.code}',
             excludeSemantics: true,
             child: Material(
               color: c.surface,
@@ -98,7 +112,7 @@ class AmountDisplay extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        MoneyFormat.currency,
+                        currency.code,
                         style: AppText.caption13Strong.copyWith(
                           color: c.textSecondary,
                         ),

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/models/currency.dart';
 import '../../../data/models/transaction_details.dart';
 import '../../../data/models/transaction_kind.dart';
 import '../../../data/providers/data_providers.dart';
@@ -11,6 +12,7 @@ class AddTransactionState {
   const AddTransactionState({
     required this.kind,
     required this.day,
+    this.currency = Currency.uzs,
     this.digits = '',
     this.categoryIds = const {},
     this.paymentMethodId,
@@ -20,7 +22,10 @@ class AddTransactionState {
 
   final TransactionKind kind;
 
-  /// Keypad input, like "35000".
+  /// So'm, or dollars paid from (or received to) a dollar method.
+  final Currency currency;
+
+  /// Keypad input: whole so'm like "35000", or dollars like "34.12".
   final String digits;
 
   /// Chosen category for each kind, so switching tabs keeps both.
@@ -36,23 +41,30 @@ class AddTransactionState {
   /// Stored file name of the receipt photo, if one was attached.
   final String? receipt;
 
-  int get amount => AmountInput.toAmount(digits);
+  /// The typed amount: whole so'm, or cents for dollars.
+  int get amount => currency == Currency.usd
+      ? AmountInput.toCents(digits)
+      : AmountInput.toAmount(digits);
   int? get categoryId => categoryIds[kind];
   bool get canSave => amount > 0 && categoryId != null;
 
   AddTransactionState copyWith({
     TransactionKind? kind,
+    Currency? currency,
     String? digits,
     Map<TransactionKind, int>? categoryIds,
-    int? paymentMethodId,
+    int? Function()? paymentMethodId,
     DateTime? day,
     String? Function()? note,
     String? Function()? receipt,
   }) => AddTransactionState(
     kind: kind ?? this.kind,
+    currency: currency ?? this.currency,
     digits: digits ?? this.digits,
     categoryIds: categoryIds ?? this.categoryIds,
-    paymentMethodId: paymentMethodId ?? this.paymentMethodId,
+    paymentMethodId: paymentMethodId == null
+        ? this.paymentMethodId
+        : paymentMethodId(),
     day: day ?? this.day,
     note: note == null ? this.note : note(),
     receipt: receipt == null ? this.receipt : receipt(),
@@ -97,8 +109,22 @@ class AddTransactionController extends Notifier<AddTransactionState> {
 
   void setKind(TransactionKind kind) => state = state.copyWith(kind: kind);
 
-  void press(KeypadKey key) =>
-      state = state.copyWith(digits: AmountInput.press(state.digits, key));
+  void press(KeypadKey key) => state = state.copyWith(
+    digits: state.currency == Currency.usd
+        ? AmountInput.pressDecimal(state.digits, key)
+        : AmountInput.press(state.digits, key),
+  );
+
+  /// So'm ↔ dollars. The amount starts over, and the payment method
+  /// goes back to the default one of that currency.
+  void setCurrency(Currency currency) {
+    if (currency == state.currency) return;
+    state = state.copyWith(
+      currency: currency,
+      digits: '',
+      paymentMethodId: () => null,
+    );
+  }
 
   void clearAmount() => state = state.copyWith(digits: '');
 
@@ -107,7 +133,7 @@ class AddTransactionController extends Notifier<AddTransactionState> {
   );
 
   void selectPaymentMethod(int id) =>
-      state = state.copyWith(paymentMethodId: id);
+      state = state.copyWith(paymentMethodId: () => id);
 
   void selectDay(DateTime day) => state = state.copyWith(day: day);
 
@@ -126,9 +152,14 @@ class AddTransactionController extends Notifier<AddTransactionState> {
   );
 
   /// The payment method that will be saved: the chosen one, else the
-  /// default from Settings, else the first one in the list.
+  /// default from Settings, else the first one in the list. Dollars use
+  /// the first dollar method.
   int? effectivePaymentMethodId() {
     if (state.paymentMethodId != null) return state.paymentMethodId;
+    if (state.currency == Currency.usd) {
+      final dollars = ref.read(dollarMethodsProvider).value ?? const [];
+      return dollars.firstOrNull?.id;
+    }
     final methods = ref.read(paymentMethodsProvider).value ?? const [];
     final defaultId = ref.read(currentSettingsProvider).defaultPaymentMethodId;
     if (methods.any((m) => m.id == defaultId)) return defaultId;
@@ -144,6 +175,12 @@ class AddTransactionController extends Notifier<AddTransactionState> {
     if (_saving || !s.canSave || categoryId == null || methodId == null) {
       return null;
     }
+    // Dollars are also saved in so'm at today's rate, for statistics.
+    final dollars = s.currency == Currency.usd;
+    final rate = ref.read(usdRateProvider)?.value;
+    if (dollars && rate == null) return null;
+    final som = dollars ? (s.amount * rate! / 100).round() : s.amount;
+    if (som <= 0) return null;
     _saving = true;
 
     // Use the chosen day with the current time of day.
@@ -162,7 +199,8 @@ class AddTransactionController extends Notifier<AddTransactionState> {
           .add(
             TransactionDraft(
               kind: s.kind,
-              amount: s.amount,
+              amount: som,
+              usdAmount: dollars ? s.amount : null,
               categoryId: categoryId,
               paymentMethodId: methodId,
               occurredAt: occurredAt,

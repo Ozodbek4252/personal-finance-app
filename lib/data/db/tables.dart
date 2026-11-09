@@ -80,6 +80,11 @@ class Transactions extends Table {
   /// keeps it in step: editing or deleting the exchange changes or
   /// removes it. Added in schema 3.
   IntColumn get exchangeId => integer().nullable().references(Exchanges, #id)();
+
+  /// Set when the money came from or went to a dollar method: the
+  /// amount in cents. [amount] then holds its so'm value at that day's
+  /// rate, so totals and statistics stay in so'm. Added in schema 4.
+  IntColumn get usdAmount => integer().nullable()();
 }
 
 /// Money moved from one payment method to another in a different

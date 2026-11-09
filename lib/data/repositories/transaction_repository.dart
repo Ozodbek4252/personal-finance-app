@@ -93,8 +93,11 @@ class TransactionRepository {
 
   Selectable<QueryRow> _balances(Currency currency) => _db.customSelect(
     'SELECT pm.id AS id, pm.opening_balance'
+    // Dollar methods count their transactions in cents.
     ' + COALESCE((SELECT SUM('
-    "CASE WHEN t.kind = 'income' THEN t.amount ELSE -t.amount END) "
+    "CASE WHEN t.kind = 'income' THEN 1 ELSE -1 END * "
+    "CASE WHEN pm.currency = 'usd' THEN COALESCE(t.usd_amount, 0) "
+    'ELSE t.amount END) '
     'FROM transactions t WHERE t.payment_method_id = pm.id), 0)'
     // A fee saved as an expense is already counted above, so it is
     // taken only once.
@@ -162,6 +165,7 @@ class TransactionRepository {
         note: row.note,
         description: row.description,
         receiptPath: row.receiptPath,
+        usdAmount: row.usdAmount,
       ),
     );
   }
@@ -192,6 +196,7 @@ class TransactionRepository {
     note: Value(_blankToNull(d.note)),
     description: Value(_blankToNull(d.description)),
     receiptPath: Value(d.receiptPath),
+    usdAmount: Value(d.usdAmount),
   );
 
   static String? _blankToNull(String? s) =>

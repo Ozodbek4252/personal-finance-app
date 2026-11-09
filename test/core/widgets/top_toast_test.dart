@@ -23,9 +23,7 @@ void main() {
     );
   }
 
-  testWidgets('shows at the top and goes away after 4 seconds', (
-    tester,
-  ) async {
+  testWidgets('shows at the top and goes away after 4 seconds', (tester) async {
     await pumpApp(tester);
     showToast(ctx, 'Changes saved');
     await tester.pumpAndSettle();
