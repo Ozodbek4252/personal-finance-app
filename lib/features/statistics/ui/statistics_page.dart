@@ -13,6 +13,7 @@ import '../../../core/widgets/segmented_tabs.dart';
 import '../../../router.dart';
 import '../domain/stat_period.dart';
 import '../providers/statistics_providers.dart';
+import 'widgets/exclude_categories.dart';
 import 'widgets/stat_cards.dart';
 
 /// Statistics tab: savings, spending by category and trends for a
@@ -78,6 +79,8 @@ class StatisticsPage extends ConsumerWidget {
                 ],
               ),
             ),
+            const ExcludedCategoriesRow(),
+            const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
               child: switch (data) {

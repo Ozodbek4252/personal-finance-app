@@ -33,11 +33,37 @@ class StatPeriodNotifier extends Notifier<StatPeriod> {
   bool get canGoNext => !state.next.start.isAfter(_now);
 }
 
-/// All numbers for the selected period and the 5 periods before it.
+/// Expense categories left out of the Statistics tab, like "Home", to
+/// see the rest of the spending. Kept only while the app is open; it
+/// changes no data.
+final statExcludedCategoriesProvider =
+    NotifierProvider<StatExcludedCategories, Set<int>>(
+      StatExcludedCategories.new,
+    );
+
+class StatExcludedCategories extends Notifier<Set<int>> {
+  @override
+  Set<int> build() => const {};
+
+  void toggle(int categoryId) => state = state.contains(categoryId)
+      ? ({...state}..remove(categoryId))
+      : {...state, categoryId};
+
+  void clear() => state = const {};
+}
+
+/// All numbers for the selected period and the 5 periods before it,
+/// without the excluded categories.
 final statisticsProvider = Provider<AsyncValue<StatisticsData>>((ref) {
   final period = ref.watch(statPeriodProvider);
+  final excluded = ref.watch(statExcludedCategoriesProvider);
   final first = period.lastN(StatisticsData.chartLength).first;
   return ref
       .watch(periodTransactionsProvider(DateRange(first.start, period.end)))
-      .whenData((items) => StatisticsData.build(period, items));
+      .whenData(
+        (items) => StatisticsData.build(period, [
+          for (final t in items)
+            if (!excluded.contains(t.category.id)) t,
+        ]),
+      );
 });

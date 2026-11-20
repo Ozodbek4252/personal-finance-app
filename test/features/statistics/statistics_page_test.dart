@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -86,5 +87,57 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Monthly overview'));
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Back'), findsOneWidget);
+  });
+
+  testApp('excluding a category leaves it out; data stays', sampleData: true, (
+    tester,
+    db,
+  ) async {
+    Future<int> rows() async =>
+        (await tester.runAsync(() => db.transactions.count().getSingle()))!;
+    final before = await rows();
+
+    await _openTab(tester);
+    await _scrollTo(tester, find.text('Total spent'));
+    expect(find.text('3 050 000'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Exclude categories'),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Exclude categories'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Groceries'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Done · 1 left out'), findsOneWidget);
+    await tester.tap(find.text('Done · 1 left out'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Without Groceries'), findsOneWidget);
+    await _scrollTo(tester, find.text('Total spent'));
+    // 3 050 000 − 820 000 of groceries.
+    expect(find.text('2 230 000'), findsWidgets);
+    expect(find.text('3 050 000'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.text('Without Groceries'),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Without Groceries'));
+    await tester.pumpAndSettle();
+    expect(find.text('Without Groceries'), findsNothing);
+    await _scrollTo(tester, find.text('Total spent'));
+    expect(find.text('3 050 000'), findsWidgets);
+
+    expect(await rows(), before, reason: 'nothing is deleted or changed');
   });
 }
